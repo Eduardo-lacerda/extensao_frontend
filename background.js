@@ -18,3 +18,10 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
         chrome.tabs.executeScript(tabId, {file: "getHighlights.js"});
     }
 });
+
+chrome.browserAction.onClicked.addListener(function (){
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        chrome.tabs.executeScript(tabs[0].id,{file: "highlightMode.js"});
+        chrome.tabs.executeScript(tabs[0].id, {file: "popup.js"});
+    });
+});

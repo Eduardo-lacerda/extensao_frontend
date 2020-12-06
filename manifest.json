@@ -13,8 +13,10 @@
       "matches": [ "http://*/*", "https://*/*"]
     }
   ],
+  "web_accessible_resources": [
+    "popup.html"
+  ],
   "browser_action": {
-    "default_popup": "popup.html"
   },
   "manifest_version": 2
 }
