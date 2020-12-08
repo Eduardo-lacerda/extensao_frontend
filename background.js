@@ -1,6 +1,8 @@
-chrome.runtime.onInstalled.addListener(function() {
-    chrome.storage.sync.set({'highlightMode': false}, function() {});
+const scriptsToInject = ['utils/jquery.js', 'content-scripts/xpath.js', 
+'content-scripts/dataControl.js', 'content-scripts/highlighter.js'];
+const cssToInject = ['css/highlight.css', 'css/popup.css'];
 
+chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
         chrome.declarativeContent.onPageChanged.addRules([{
             conditions: [],
@@ -9,19 +11,24 @@ chrome.runtime.onInstalled.addListener(function() {
     });
 });
 
-//Adicionar CSS na aba atual
+//Injetar CSS e scripts na aba atual
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
         chrome.storage.sync.set({'highlightMode': false}, function() {});
-        chrome.tabs.executeScript(tabId, {file: "jquery.js"});
-        chrome.tabs.insertCSS(tabId, {file: 'highlight.css'});
-        chrome.tabs.executeScript(tabId, {file: "getHighlights.js"});
+
+        scriptsToInject.forEach(script => {
+            chrome.tabs.executeScript(tabId, {file: script});
+        });
+
+        cssToInject.forEach(cssFile => {
+            chrome.tabs.insertCSS(tabId, {file: cssFile});
+        });
     }
 });
 
+//Ao clicar no ícone
 chrome.browserAction.onClicked.addListener(function (){
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.executeScript(tabs[0].id,{file: "highlightMode.js"});
-        chrome.tabs.executeScript(tabs[0].id, {file: "popup.js"});
+        chrome.tabs.executeScript(tabs[0].id, {file: "popup/popup.js"});
     });
 });

@@ -7,14 +7,8 @@
     "scripts": ["background.js"],
     "persistent": false
   },
-  "content_scripts": [ 
-    { 
-      "js": ["jquery.js"],
-      "matches": [ "http://*/*", "https://*/*"]
-    }
-  ],
   "web_accessible_resources": [
-    "popup.html"
+    "popup/popup.html"
   ],
   "browser_action": {
   },
