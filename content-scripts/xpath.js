@@ -25,8 +25,6 @@ var _xpath = {
                     paths.splice(0, 0, '/*[@id="' + node.id + '"][1]');
                     break;
                 }
-
-                console.log("document contains " + length + " elements with selector " + selector + ". Ignoring");
             }
 
             for (var sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
@@ -60,14 +58,12 @@ var _xpath = {
     },
     
     createRangeFromXPathRange: function (xpathRange) {
-        console.log('CHAMOUUU')
         "use strict";
         var startContainer, endContainer, endOffset, evaluator = new XPathEvaluator();
 
         // must have legal start and end container nodes
         startContainer = evaluator.evaluate(xpathRange.startContainerPath,
             document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-        console.log(startContainer)
         if (!startContainer.singleNodeValue) {
             return null;
         }
@@ -89,7 +85,6 @@ var _xpath = {
         var range = document.createRange();
         range.setStart(startContainer.singleNodeValue, xpathRange.startOffset);
         range.setEnd(endContainer.singleNodeValue, endOffset);
-        console.log(range)
         return range;
     }
 };

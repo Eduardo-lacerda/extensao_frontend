@@ -12,7 +12,7 @@ chrome.runtime.onInstalled.addListener(function() {
 });
 
 //Injetar CSS e scripts na aba atual
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+/* chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
         chrome.storage.sync.set({'highlightMode': false}, function() {});
 
@@ -24,6 +24,10 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
             chrome.tabs.insertCSS(tabId, {file: cssFile});
         });
     }
+}); */
+
+chrome.tabs.onUpdated.addListener(function() {
+    chrome.storage.sync.set({'highlightMode': false}, function() {});
 });
 
 //Ao clicar no ícone

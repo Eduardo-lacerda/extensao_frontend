@@ -11,3 +11,4 @@ chrome.storage.sync.get('highlightMode', function(data) {
         _highlighter.turnOffHighlightMode();
     }
 });
+

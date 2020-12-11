@@ -12,7 +12,6 @@ var _chromeStorage = {
 
     getHighlights: function () {
         chrome.storage.sync.get(currentURL, function(data) {
-            console.log(data);
             //Se a url já foi salva
             if(data[currentURL]) {
                 //Se existem highlights nessa url
@@ -21,7 +20,7 @@ var _chromeStorage = {
                     
                     //Estilizar highlights
                     highlights.forEach(highlight => {
-                        _highlighter.highlightLoadedText(highlight.xpath);
+                        _highlighter.highlightLoadedText(highlight.xpath, highlight.color);
                     });
                 }
             }
@@ -39,7 +38,7 @@ var _chromeStorage = {
             }
             //-----------------------------
             
-            var highlight = {'text': text, 'xpath': xpath};
+            var highlight = {'text': text, 'xpath': xpath, 'color': color};
             data['highlights'].push(highlight);
             var emptyObj = {};
             emptyObj[currentURL] = data;

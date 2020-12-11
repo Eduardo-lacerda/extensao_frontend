@@ -7,6 +7,14 @@
     "scripts": ["background.js"],
     "persistent": false
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["css/highlight.css", "css/popup.css"],
+      "js": ["utils/jquery.js", "content-scripts/xpath.js", 
+        "content-scripts/dataControl.js", "content-scripts/highlighter.js"]
+    }
+  ],
   "web_accessible_resources": [
     "popup/popup.html"
   ],

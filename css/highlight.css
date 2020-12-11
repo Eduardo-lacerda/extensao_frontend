@@ -1,3 +1,15 @@
 .highlighted {
+    
+}
+
+.highlighted.yellow {
     background: #ffff72;
+}
+
+.highlighted.blue {
+    background: #72ffde;
+}
+
+.highlighted.green {
+    background: #cfff72;
 }

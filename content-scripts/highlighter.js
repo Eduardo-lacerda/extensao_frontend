@@ -1,6 +1,7 @@
 var flag = 0;
-var highlightMode = false;
+var highlightMode;
 var teste = 'asdasfsfa';
+var color = 'yellow';
 
 //Carregar os highlights já feitos na página
 _chromeStorage.getHighlights();
@@ -29,10 +30,24 @@ var _highlighter = {
         $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
             $('body').prepend(data);
         });
+
+        const that = this;
+        setTimeout(function() {
+            $('.highlighter-popup .color-btn.yellow').click(function() {
+                that.changeHighlightColor('yellow');
+            });
+            $('.highlighter-popup .color-btn.blue').click(function() {
+                that.changeHighlightColor('blue');
+            });
+            
+            $('.highlighter-popup .color-btn.green').click(function() {
+                that.changeHighlightColor('green');
+            });
+        }, 20);
     },
 
     turnOffHighlightMode: function() {
-        $('.popup').remove();
+        $('.highlighter-popup').remove();
     },
 
     highlightText: function() {
@@ -43,28 +58,23 @@ var _highlighter = {
         const selectedText = range.toString();
         _chromeStorage.saveHighlight(xpath, selectedText);
 
-        this.wrapSelection(range);
+        this.wrapSelection(range, color);
         this.turnOnHighlightMode();
-        //saveHighlight(range.toString());
-        //const rangeContent = range.extractContents();
-        /*if(wrapTextNodes(rangeContent))
-        range.insertNode(rangeContent); */
     },
     
-    highlightLoadedText: function(xpath) {
-        console.log(xpath);
+    highlightLoadedText: function(xpath, highlightColor) {
         var range = _xpath.createRangeFromXPathRange(xpath);
-        console.log(range)
         if(range != null)
-            this.wrapSelection(range);
+            this.wrapSelection(range, highlightColor);
     },
     
-    wrapSelection: function(range) {
+    wrapSelection: function(range, highlightColor) {
         "use strict";
         // highlights are wrapped in one or more spans
         var span = document.createElement("SPAN");
         span.className = 'highlighted';
-    
+        $(span).addClass(highlightColor);
+        
         // each node has a .nextElement property, for following the linked list
         var record = {
             firstSpan: null,
@@ -74,7 +84,9 @@ var _highlighter = {
         this.wrapTextNodes(range, record, function () {
             // wrapper creator
             var newSpan = span.cloneNode(false);
-    
+
+            //Troca a cor baseado no contraste
+
             if (record.lastSpan) {
                 record.lastSpan.nextSpan = newSpan;
             }
@@ -85,6 +97,7 @@ var _highlighter = {
             newSpan.firstSpan = record.firstSpan;
             return newSpan;
         });
+        this.setColor($(record.lastSpan));
         return record.firstSpan;
     },
     
@@ -171,38 +184,26 @@ var _highlighter = {
                 dirIsLeaf = false;
             }
         } while (!done);
+    },
+
+    setColor: function(element) {
+        const rgbString = element.css('color');
+        if(rgbString != undefined){
+            const rgbValue = rgbString.replace(/[^\d,]/g, '').split(',');
+            const contrast = Math.round(((parseInt(rgbValue[0]) * 299) + 
+                (parseInt(rgbValue[1]) * 587) + 
+                (parseInt(rgbValue[2]) * 114)) / 1000); 
+            if(contrast > 125) {
+                element.css('color', 'rgb(29, 29, 29)'); 
+            }
+        }
+    },
+
+    changeHighlightColor: function(newColor){
+        color = newColor;
     }
 }
 
 _highlighter.addEventListeners();
-
-
-
-
-//Antigo método de highlight
-
-function wrapTextNodess(node) {
-    if(node.childNodes){
-        node.childNodes.forEach((childNode) => {
-            if((childNode.nodeType == TEXT_NODE || textNodes.includes(childNode.tagName)) && childNode.textContent != ' '){
-                var newChild = wrapNode(childNode);
-                node.replaceChild(newChild, childNode);
-            }
-            else {
-                wrapTextNodes(childNode);
-            }
-        })
-    }
-    console.log('terminou')
-    return true;
-}
-
-function wrapNode(node) {
-    var newElement = document.createElement("span");
-    newElement.setAttribute('class', 'highlighted');
-    var newNode = newElement.cloneNode(false);
-    newNode.appendChild(node);
-    return newNode;
-}
 
 
