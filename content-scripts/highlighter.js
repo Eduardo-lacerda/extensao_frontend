@@ -3,10 +3,6 @@ var highlightMode;
 var teste = 'asdasfsfa';
 var color = 'yellow';
 
-//Carregar os highlights já feitos na página
-_chromeStorage.getHighlights();
-//--------------------------------------
-
 var _highlighter = {
     //Detectar quando o usuário selecionar um texto
     addEventListeners: function() {
@@ -28,21 +24,38 @@ var _highlighter = {
 
     turnOnHighlightMode: function() {
         $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
-            $('body').prepend(data);
+            if(highlightMode)
+                $('body').prepend(data);
+            $('.highlighter-popup-log').html('');
+            $('.highlighter-popup-log').prepend(logsHTML);
         });
 
         const that = this;
         setTimeout(function() {
             $('.highlighter-popup .color-btn.yellow').click(function() {
                 that.changeHighlightColor('yellow');
+                $('.highlighter-popup .color-btn').removeClass('selected');
+                $('.highlighter-popup .color-btn.yellow').addClass('selected');
             });
-            $('.highlighter-popup .color-btn.blue').click(function() {
-                that.changeHighlightColor('blue');
+            $('.highlighter-popup .color-btn.orange').click(function() {
+                that.changeHighlightColor('orange');
+                $('.highlighter-popup .color-btn').removeClass('selected');
+                $('.highlighter-popup .color-btn.orange').addClass('selected');
             });
             
             $('.highlighter-popup .color-btn.green').click(function() {
-                that.changeHighlightColor('green');
+                that.changeHighlightColor('green');~
+                $('.highlighter-popup .color-btn').removeClass('selected');
+                $('.highlighter-popup .color-btn.green').addClass('selected');
             });
+
+            document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
+                item.addEventListener('click', event => {
+                    const highlightId = $(event.target).attr('id');
+                    const url = $(event.target).parent().attr('id');
+                    _chromeStorage.deleteHighlight(highlightId, url);
+                })
+              })
         }, 20);
     },
 
@@ -54,21 +67,84 @@ var _highlighter = {
         this.turnOffHighlightMode();
         var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
         var range = sel.getRangeAt(0);
-        const xpath = _xpath.createXPathRangeFromRange(range);
-        const selectedText = range.toString();
-        _chromeStorage.saveHighlight(xpath, selectedText);
 
-        this.wrapSelection(range, color);
+        if(range.startOffset != 0 && range.endOffset != 0) {
+            const xpath = _xpath.createXPathRangeFromRange(range);
+            const selectedText = range.toString();
+            const id = _utils.create_UUID();
+            _chromeStorage.saveHighlight(xpath, selectedText, id);
+    
+            this.wrapSelection(range, color, id); 
+        }
         this.turnOnHighlightMode();
     },
     
-    highlightLoadedText: function(xpath, highlightColor) {
+    highlightLoadedText: function(xpath, highlightColor, id) {
         var range = _xpath.createRangeFromXPathRange(xpath);
         if(range != null)
-            this.wrapSelection(range, highlightColor);
+            this.wrapSelection(range, highlightColor, id);
+    },
+
+    removeHighlight: function (id) {
+        this.turnOffHighlightMode();
+
+        // id is for first span in list
+        var span = document.getElementById(id);
+
+        if (!this.isHighlightSpan(span)) {
+            return false;
+        }
+
+        /**
+         * merge text nodes with prev/next sibling
+         * @param n
+         * @private
+         */
+        function _merge(n) {
+            if (n.nodeType === Node.TEXT_NODE) {
+                if (n.nextSibling && n.nextSibling.nodeType === Node.TEXT_NODE) {
+                    // merge next sibling into newNode
+                    n.textContent += n.nextSibling.textContent;
+                    // remove next sibling
+                    n.nextSibling.parentNode.removeChild(n.nextSibling);
+                }
+
+                if (n.previousSibling && n.previousSibling.nodeType === Node.TEXT_NODE) {
+                    // merge nodeNew into previousSibling
+                    n.previousSibling.textContent += n.textContent;
+                    // remove newNode
+                    n.parentNode.removeChild(n);
+                }
+            }
+        }
+
+        // iterate whilst all tests for being a highlight span node are passed
+        while (this.isHighlightSpan(span)) {
+            //
+            while (span.hasChildNodes()) {
+                var nodeNew = span.parentNode.insertBefore(span.firstChild, span);
+
+                // merge restored nodes
+                _merge(nodeNew);
+            }
+
+            var nodeRemovedPreviousSibling = span.previousSibling;
+            var nodeRemoved = span.parentNode.removeChild(span);
+
+            // if removing the span brings 2 text nodes together, join them
+            if (nodeRemovedPreviousSibling) {
+                _merge(nodeRemovedPreviousSibling);
+            }
+
+            // point to next hl (undefined for last in list)
+            span = nodeRemoved.nextSpan;
+        }
+
+        this.turnOnHighlightMode();
+        return true;
     },
     
-    wrapSelection: function(range, highlightColor) {
+    wrapSelection: function(range, highlightColor, id) {
         "use strict";
         // highlights are wrapped in one or more spans
         var span = document.createElement("SPAN");
@@ -85,7 +161,13 @@ var _highlighter = {
             // wrapper creator
             var newSpan = span.cloneNode(false);
 
-            //Troca a cor baseado no contraste
+            // link up
+            if (!record.firstSpan) {
+                record.firstSpan = newSpan;
+
+                // only give the first span the id
+                record.firstSpan.id = id;
+            }
 
             if (record.lastSpan) {
                 record.lastSpan.nextSpan = newSpan;
@@ -97,6 +179,7 @@ var _highlighter = {
             newSpan.firstSpan = record.firstSpan;
             return newSpan;
         });
+        //Troca a cor baseado no contraste
         this.setColor($(record.lastSpan));
         return record.firstSpan;
     },
@@ -201,6 +284,12 @@ var _highlighter = {
 
     changeHighlightColor: function(newColor){
         color = newColor;
+    },
+
+    isHighlightSpan: function (node) {
+        return node &&
+            node.nodeType === Node.ELEMENT_NODE && node.nodeName === "SPAN" &&
+            node.firstSpan !== undefined;
     }
 }
 

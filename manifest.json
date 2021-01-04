@@ -2,17 +2,17 @@
   "name": "Visualiz",
   "version": "1.0",
   "description": "Build an Extension!",
-  "permissions": ["storage", "declarativeContent", "activeTab", "<all_urls>", "tabs"],
+  "permissions": ["storage", "declarativeContent", "activeTab", "<all_urls>", "tabs", "unlimitedStorage"],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": ["background/background.js", "background/dataControlBack.js"],
     "persistent": false
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "css": ["css/highlight.css", "css/popup.css"],
-      "js": ["utils/jquery.js", "content-scripts/xpath.js", 
-        "content-scripts/dataControl.js", "content-scripts/highlighter.js"]
+      "js": ["utils/jquery.js", "content-scripts/xpath.js", "popup/popup.js",
+        "content-scripts/dataControl.js", "content-scripts/highlighter.js", "utils/utils.js"]
     }
   ],
   "web_accessible_resources": [

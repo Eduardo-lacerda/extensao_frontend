@@ -1,22 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Signika+Negative:wght@300;400;600;700&display=swap');
+
 .highlighter-popup {
     position: fixed;
-    width: 24%;
+    width: 321px;
     height: 262px;
-    background: #F8F9FA;
+    background: white;
     z-index: 2000000000;
     right: 15px;
     top: 15px;
     border-radius: 14px;
     box-shadow: 2px 3px 13px 5px #00000017;
+    font-family: 'Signika Negative', sans-serif;
+}
+
+.highlighter-popup.controller {
+    top: 15px;
+}
+
+.highlighter-popup.log {
+    top: 290px;
+}
+
+.highlighter-popup-header .colors-wrapper {
+    width: 110px;
+    display: inline-flex;
+    justify-content: space-evenly;
 }
 
 .highlighter-popup-header {
     width: 100%;
     height: 16%;
-    background: #E9ECEF;
+    background: #F7F6FF;
     border-radius: 14px 14px 0 0;
-    display: flex;
-    justify-content: space-evenly;
+}
+
+.highlighter-popup.log .highlighter-popup-header h4 {
+    font-size: 17px;
+    text-align: left;
+    margin-right: auto;
+    margin-left: 22px;
+    color: #6C757D;
+    line-height: 41px;
+    padding: 0;
+}
+
+.highlighter-popup.log .highlighter-popup-header {
+    align-items: center;
 }
 
 .color-btn {
@@ -28,14 +57,146 @@
     border: none;
 }
 
+.color-btn.selected {
+    border: 2px solid #585858;
+}
+
+.color-btn:focus {
+    outline: none;
+}
+
 .color-btn.yellow {
     background: #ffff72;
 }
 
-.color-btn.blue {
-    background: #72ffde;
+.color-btn.orange {
+    background: #ffcaa5;
 }
 
 .color-btn.green {
     background: #cfff72;
+}
+
+.highlighter-popup-log {
+    height: 220px;
+    overflow-y: auto;
+}
+
+.highlighter-popup-log .log-wrapper {
+    padding: 6px 20px;
+    border: solid 1px #e2e2e2;
+    border-radius: 18px;
+    width: 263px;
+    margin: 10px auto;
+    position: relative;
+    box-sizing: border-box;
+    height: 83px;
+/*     background: rgb(39, 39, 39);
+    color: white; */
+}
+
+.highlighter-popup-log .log-text {
+    width: 177px;
+    margin: 0;
+    margin-right: 10px;
+    line-height: 18px;
+    vertical-align: baseline;
+    display: inline-block;
+    margin-right: 10px;
+    max-height: 52px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    padding-left: 7px;
+    font-size: 16px;
+    box-sizing: content-box;
+    margin-top: 8px;
+}
+
+.highlighter-popup-log .log-icons {
+    width: 27px;
+    display: inline-block;
+    box-sizing: content-box;
+    position: absolute;
+    top: 13px;
+}
+
+.highlighter-popup .icon-wrapper {
+    background: #757575;
+    border-radius: 3px;
+    width: 24px;
+    height: 24px;
+    background: #272727;
+}
+
+.highlighter-popup-log .log-web-icon {
+    height: 24px;
+    width: 24px;
+}
+
+.highlighter-popup-log .log-delete {
+    margin-top: 8px;
+    font-size: 21px;
+    margin-left: 1px;
+    cursor: pointer;
+}
+
+.highlighter-popup .log-text::before {
+    content: "";
+    width: 13px;
+    height: 81px;
+    position: absolute;
+    left: -1px;
+    top: 0;
+    border-radius: 84px 0 0 84px;
+}
+
+.highlighter-popup .log-text.yellow::before {
+    background: #ffff72;
+}
+
+.highlighter-popup .log-text.orange::before {
+    background: #ffcaa5;
+}
+
+.highlighter-popup .log-text.green::before {
+    background: #cfff72;
+}
+
+.highlighter-popup.controller .icons-wrapper {
+    display: inline-flex;
+    width: 76px;
+    justify-content: space-evenly;
+    margin-left: 120px;
+    margin-top: 8px;
+}
+
+.highlighter-popup.controller .header-btn {
+    width: 27px;
+    height: 27px;
+    border: none;
+    border-radius: 100%;
+    background: #E9ECEF;
+    padding: 4px 0 0 0;
+    cursor: pointer;
+}
+
+.highlighter-popup.controller .header-btn i {
+    font-size: 18px;
+    color: #6C757D;
+}
+
+.highlighter-popup-log::-webkit-scrollbar {
+    width: 14px;
+    background: white;
+}
+
+.highlighter-popup-log::-webkit-scrollbar-thumb {
+    background: #DEE2E6;
+    border-radius: 18px;
+    border: solid 5px white;
+}
+
+.highlighter-popup-log::-webkit-scrollbar-thumb:hover {
+    background: #ababab;
+    border: solid 4px white;
 }

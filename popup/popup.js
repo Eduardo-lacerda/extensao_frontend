@@ -1,14 +1,21 @@
 //Ligar / desligar highlight mode
-chrome.storage.sync.get('highlightMode', function(data) {
-    highlightMode = data.highlightMode;
-    highlightMode = !highlightMode;
-    chrome.storage.sync.set({'highlightMode': highlightMode}, function() {});
-
-    if(highlightMode) {
-        _highlighter.turnOnHighlightMode();
+chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
+    if(message.msg == 'toggle_highlightMode'){
+        highlightMode = message.data.highlightMode;
+        _popup.toggleHighlightMode();
     }
-    else {
-        _highlighter.turnOffHighlightMode();
-    }
+    return true;
 });
+
+var _popup = {
+    toggleHighlightMode: function() {
+        if(highlightMode) {
+            _highlighter.turnOnHighlightMode();
+        }
+        else {
+            _highlighter.turnOffHighlightMode();
+        }
+    },
+}
+
 
