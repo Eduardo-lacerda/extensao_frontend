@@ -13,25 +13,30 @@
     font-family: 'Signika Negative', sans-serif;
 }
 
-.highlighter-popup.controller {
+.highlighter-popup.log {
     top: 15px;
 }
 
-.highlighter-popup.log {
+.highlighter-popup.controller {
     top: 290px;
 }
 
 .highlighter-popup-header .colors-wrapper {
-    width: 110px;
     display: inline-flex;
     justify-content: space-evenly;
+    height: 42px;
+    padding-top: 10px;
+    box-sizing: border-box;
+    width: 98px;
+    margin-right: 102px;
 }
 
 .highlighter-popup-header {
     width: 100%;
-    height: 16%;
+    height: 42px;
     background: #F7F6FF;
     border-radius: 14px 14px 0 0;
+    display: flex;
 }
 
 .highlighter-popup.log .highlighter-popup-header h4 {
@@ -50,15 +55,15 @@
 
 .color-btn {
     cursor: pointer;
-    margin-top: 10px;
     height: 20px;
     width: 20px;
     border-radius: 100%;
+    box-shadow: none;
     border: none;
 }
 
 .color-btn.selected {
-    border: 2px solid #585858;
+    box-shadow: 0 0 0px 3px #5d5d5d;
 }
 
 .color-btn:focus {
@@ -79,15 +84,15 @@
 
 .highlighter-popup-log {
     height: 220px;
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .highlighter-popup-log .log-wrapper {
-    padding: 6px 20px;
-    border: solid 1px #e2e2e2;
+    border: solid 1px #F7F6FF;;
     border-radius: 18px;
     width: 263px;
-    margin: 10px auto;
+    padding: 6px 8px 6px 20px;
+    margin: 10px 20px 10px auto;
     position: relative;
     box-sizing: border-box;
     height: 83px;
@@ -96,7 +101,7 @@
 }
 
 .highlighter-popup-log .log-text {
-    width: 177px;
+    width: 185px;
     margin: 0;
     margin-right: 10px;
     line-height: 18px;
@@ -110,6 +115,7 @@
     font-size: 16px;
     box-sizing: content-box;
     margin-top: 8px;
+    color: #6C757D;
 }
 
 .highlighter-popup-log .log-icons {
@@ -121,22 +127,24 @@
 }
 
 .highlighter-popup .icon-wrapper {
-    background: #757575;
     border-radius: 3px;
-    width: 24px;
-    height: 24px;
-    background: #272727;
+    width: 21px;
+    height: 21px;
+    background: transparent;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    padding: 3px;
 }
 
 .highlighter-popup-log .log-web-icon {
-    height: 24px;
-    width: 24px;
+    height: 21px;
+    width: 21px;
 }
 
 .highlighter-popup-log .log-delete {
     margin-top: 8px;
     font-size: 21px;
-    margin-left: 1px;
+    margin-left: 2px;
     cursor: pointer;
 }
 
@@ -162,32 +170,44 @@
     background: #cfff72;
 }
 
-.highlighter-popup.controller .icons-wrapper {
+.highlighter-popup.log .icons-wrapper {
     display: inline-flex;
     width: 76px;
     justify-content: space-evenly;
-    margin-left: 120px;
-    margin-top: 8px;
+    margin: 0;
+    height: 42px;
+    padding-top: 8px;
+    box-sizing: border-box;
 }
 
-.highlighter-popup.controller .header-btn {
+.highlighter-popup.log .header-btn {
     width: 27px;
     height: 27px;
     border: none;
     border-radius: 100%;
     background: #E9ECEF;
-    padding: 4px 0 0 0;
+    padding: 0;
     cursor: pointer;
+    outline: none;
 }
 
-.highlighter-popup.controller .header-btn i {
+#fix-btn.activated {
+    background: #00bd53 !important;
+}
+
+#fix-btn.activated i {
+    color: white !important;
+}
+
+.highlighter-popup.log .header-btn i {
     font-size: 18px;
     color: #6C757D;
+    padding-top: 4px;
 }
 
 .highlighter-popup-log::-webkit-scrollbar {
     width: 14px;
-    background: white;
+    background: transparent;
 }
 
 .highlighter-popup-log::-webkit-scrollbar-thumb {
@@ -200,3 +220,69 @@
     background: #ababab;
     border: solid 4px white;
 }
+
+
+
+/*TOGGLE*/
+.highlight-toggle-wrapper {
+    display: inline-flex;
+    padding-top: 10px;
+    box-sizing: border-box;
+    margin-right: 4px;
+    width: 44px;
+    height: 42px;
+    margin-left: 9px;
+    justify-content: space-evenly;
+}
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 23px;
+}
+
+.toggle input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 180px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 17px;
+    width: 17px;
+    bottom: 3px;
+    left: 3px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #00bd53;
+}
+
+input:focus + .slider {
+    outline: none;
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(15px);
+    -ms-transform: translateX(15px);
+    transform: translateX(15px);
+}
+/*----------------------------------------------------*/

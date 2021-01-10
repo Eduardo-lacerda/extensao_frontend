@@ -3,6 +3,22 @@ var highlightMode;
 var teste = 'asdasfsfa';
 var color = 'yellow';
 
+chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
+    switch(message.msg) { //Abrir / fechar o popup
+        case 'toggle_highlight_mode':
+            if(message.data.highlightMode) {
+                console.log('turn on front')
+                _highlighter.turnOnHighlightModeFront();
+            }
+            else {
+                console.log('turn off front')
+                _highlighter.turnOffHighlightModeFront();
+            }
+            break;
+    }
+    return true;
+});
+
 var _highlighter = {
     //Detectar quando o usuário selecionar um texto
     addEventListeners: function() {
@@ -11,7 +27,13 @@ var _highlighter = {
         }, false);
 
         document.addEventListener("mousemove", function () {
-            flag = 1;
+            var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
+            if(sel.rangeCount > 0){
+                var range = sel.getRangeAt(0);
+                const parentElementClassList = range.startContainer.parentElement.classList;
+                if(!parentElementClassList.contains('log-text') && !parentElementClassList.contains('log-wrapper')) //Caso não seja dentro do popup
+                    flag = 1;
+            }
         }, false);
 
 
@@ -23,48 +45,36 @@ var _highlighter = {
     },
 
     turnOnHighlightMode: function() {
-        $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
-            if(highlightMode)
-                $('body').prepend(data);
-            $('.highlighter-popup-log').html('');
-            $('.highlighter-popup-log').prepend(logsHTML);
-        });
-
-        const that = this;
-        setTimeout(function() {
-            $('.highlighter-popup .color-btn.yellow').click(function() {
-                that.changeHighlightColor('yellow');
-                $('.highlighter-popup .color-btn').removeClass('selected');
-                $('.highlighter-popup .color-btn.yellow').addClass('selected');
-            });
-            $('.highlighter-popup .color-btn.orange').click(function() {
-                that.changeHighlightColor('orange');
-                $('.highlighter-popup .color-btn').removeClass('selected');
-                $('.highlighter-popup .color-btn.orange').addClass('selected');
-            });
-            
-            $('.highlighter-popup .color-btn.green').click(function() {
-                that.changeHighlightColor('green');~
-                $('.highlighter-popup .color-btn').removeClass('selected');
-                $('.highlighter-popup .color-btn.green').addClass('selected');
-            });
-
-            document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
-                item.addEventListener('click', event => {
-                    const highlightId = $(event.target).attr('id');
-                    const url = $(event.target).parent().attr('id');
-                    _chromeStorage.deleteHighlight(highlightId, url);
-                })
-              })
-        }, 20);
+        console.log('turnonhighliht')
+        highlightMode = true;
+        chrome.runtime.sendMessage({msg: 'turn_on_highlight_mode'});
     },
 
     turnOffHighlightMode: function() {
-        $('.highlighter-popup').remove();
+        console.log('TURN OFF HIGHLIGHTY')
+        highlightMode = false;
+        chrome.runtime.sendMessage({msg: 'turn_off_highlight_mode'});
+    },
+
+    turnOnHighlightModeFront: function() {
+        if(document.getElementById('highlight-toggle') != null)
+            document.getElementById('highlight-toggle').checked = true;
+        highlightMode = true;
+    },
+
+    turnOffHighlightModeFront: function() {
+        if(document.getElementById('highlight-toggle') != null)
+            document.getElementById('highlight-toggle').checked = false;
+        highlightMode = false;
     },
 
     highlightText: function() {
-        this.turnOffHighlightMode();
+        var wasOpened = false;
+        if(popupOpened) {
+            wasOpened = true;
+            _popup.closePopup();
+        }
+            
         var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
         var range = sel.getRangeAt(0);
 
@@ -76,7 +86,8 @@ var _highlighter = {
     
             this.wrapSelection(range, color, id); 
         }
-        this.turnOnHighlightMode();
+        if(wasOpened)
+            _popup.openPopup();
     },
     
     highlightLoadedText: function(xpath, highlightColor, id) {
@@ -86,7 +97,7 @@ var _highlighter = {
     },
 
     removeHighlight: function (id) {
-        this.turnOffHighlightMode();
+        _popup.closePopup();
 
         // id is for first span in list
         var span = document.getElementById(id);
@@ -140,7 +151,7 @@ var _highlighter = {
             span = nodeRemoved.nextSpan;
         }
 
-        this.turnOnHighlightMode();
+        _popup.openPopup();
         return true;
     },
     

@@ -1,4 +1,6 @@
 var highlightMode = false;
+var popupOpened = false;
+var popupFixed = false;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -9,27 +11,15 @@ chrome.runtime.onInstalled.addListener(function() {
     });
 });
 
-//Injetar CSS e scripts na aba atual
-/* chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-    if (changeInfo.status == 'complete') {
-        chrome.storage.sync.set({'highlightMode': false}, function() {});
 
-        scriptsToInject.forEach(script => {
-            chrome.tabs.executeScript(tabId, {file: script});
-        });
-
-        cssToInject.forEach(cssFile => {
-            chrome.tabs.insertCSS(tabId, {file: cssFile});
-        });
-    }
-}); */
-
-
-
+//Ao atualizar a página
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
+        if(popupOpened) {
+            popupOpened = !popupOpened;
+            togglePopup();
+        }
         chrome.storage.sync.set({'highlightMode': false}, function() {});
-        chrome.tabs.sendMessage(tabId, {msg: 'toggle_highlightMode', data: {highlightMode: highlightMode}});
         //Carregar os highlights já feitos na página e o log
         _chromeStorage.getHighlights('updateAll');
         //--------------------------------------
@@ -38,25 +28,73 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 
 //Ao clicar no ícone
 chrome.browserAction.onClicked.addListener(function (){
-    highlightMode = !highlightMode;
-    chrome.tabs.query({}, function(tabs) {
-        tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_highlightMode', data: {highlightMode: highlightMode}});
-        });
-    });
+    console.log('clicou')
+    togglePopup();
 
     //Resetar highlights
     //chrome.storage.sync.set({'allHighlights': {}}, function() {});
 });
 
+
+function togglePopup() {
+    console.log(popupOpened)
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed}});
+        });
+    });
+}
+
+function togglePopupOption(_popupOpened) {
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed}});
+        });
+    });
+}
+
+function togglePopupFixed() {
+    popupFixed = !popupFixed;
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup_fixed'});
+        });
+    });
+}
+
+function toggleHighlightMode(activated) {
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_highlight_mode', data: {highlightMode: activated}});
+        });
+    });
+}
+
 //Atualizar log
 chrome.runtime.onMessage.addListener(
-    function(response, sender, sendResponse){  
-        if(response.msg == 'update_log') {
-            _chromeStorage.getHighlights('updateLog');
-        }
-        else if(response.msg == 'update_all') {
-            _chromeStorage.getHighlights('updateAll');
+    function(message, sender, sendResponse){  
+        switch(message.msg) {
+            case 'update_log':
+                _chromeStorage.getHighlights('updateLog');
+                break;
+            case 'update_all':
+                _chromeStorage.getHighlights('updateAll');
+                break;
+            case 'toggle_popup':
+                popupOpened = message.data.popupOpened;
+                break;
+            case 'close_popup':
+                togglePopupOption(true)
+                break;
+            case 'turn_on_highlight_mode':
+                toggleHighlightMode(true);
+                break;
+            case 'turn_off_highlight_mode':
+                toggleHighlightMode(false);
+                break;
+            case 'toggle_popup_fixed':
+                togglePopupFixed();
+                break;
         }
     }
 );

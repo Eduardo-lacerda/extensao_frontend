@@ -78,5 +78,13 @@ var _utils = {
             return (c=='x' ? r :(r&0x3|0x8)).toString(16);
         });
         return uuid;
+    },
+
+    waitFor: function(conditionFunction) {
+        const poll = resolve => {
+            if(conditionFunction()) resolve();
+            else setTimeout(_ => poll(resolve), 400);
+        }
+        return new Promise(poll);
     }
 }

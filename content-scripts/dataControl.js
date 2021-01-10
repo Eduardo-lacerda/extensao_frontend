@@ -48,6 +48,7 @@ var _chromeStorage = {
     },
 
     stylizeHighlights: function (data) {
+        console.log('stylize')
         //Se a url já foi salva
         if(data[currentURL]) {
             //Se existem highlights na página atual

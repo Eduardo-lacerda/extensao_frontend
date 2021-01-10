@@ -34,6 +34,7 @@ var _chromeStorage = {
                 if(callBack == 'updateAll') {
                     that.updateLog(data);
                     that.updatePageHighlights(data);
+                    console.log('get highlights update all')
                 }
                 else if(callBack == 'updateLog')
                     that.updateLog(data);
@@ -86,6 +87,7 @@ var _chromeStorage = {
     },
 
     updatePageHighlights: function(data) {
+        console.log('updatepage highlights back')
         chrome.tabs.query({}, function(tabs) {
             tabs.forEach((tab) => {
                 chrome.tabs.sendMessage(tab.id, {msg: 'update_page_highlights', data: data, highlightMode: highlightMode});
