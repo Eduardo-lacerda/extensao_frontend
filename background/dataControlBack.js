@@ -70,12 +70,12 @@ var _chromeStorage = {
         var logsHTML = '';
         for (url in data){
             const urlData = data[url];
-            const iconImg = '<div class="icon-wrapper"><img class="log-web-icon" src="' + urlData.icon + '"></div>';
+            const iconImg = '<div class="icon-wrapper is-popup-part"><img class="log-web-icon is-popup-part" src="' + urlData.icon + '"></div>';
             urlData.highlights.forEach(highlight => {
-                var logHTML = '<div class="log-wrapper">';
-                var text = '<p class="log-text '+ highlight.color +'">' + highlight.text + '</p>';
-                logHTML = logHTML + text + '<div class="log-icons" id="'+ url +'">';
-                logHTML = logHTML + iconImg + '<i id="'+ highlight.id +'" class="material-icons-outlined log-delete">delete</i></div></div>';
+                var logHTML = '<div class="log-wrapper is-popup-part">';
+                var text = '<p class="log-text is-popup-part '+ highlight.color +'">' + highlight.text + '</p>';
+                logHTML = logHTML + text + '<div class="log-icons is-popup-part" id="'+ url +'">';
+                logHTML = logHTML + iconImg + '<i id="'+ highlight.id +'" class="is-popup-part material-icons-outlined log-delete">delete</i></div></div>';
                 logsHTML = logsHTML + logHTML;
             });
         }

@@ -27,42 +27,47 @@ var _highlighter = {
         }, false);
 
         document.addEventListener("mousemove", function () {
-            var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
-            if(sel.rangeCount > 0){
-                var range = sel.getRangeAt(0);
-                const parentElementClassList = range.startContainer.parentElement.classList;
-                if(!parentElementClassList.contains('log-text') && !parentElementClassList.contains('log-wrapper')) //Caso não seja dentro do popup
-                    flag = 1;
-            }
+            flag = 1;
         }, false);
 
 
         document.addEventListener("mouseup", function () {
             if(flag == 1 && highlightMode){
-                _highlighter.highlightText();
+                var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
+                if(sel.rangeCount > 0){
+                    var range = sel.getRangeAt(0);
+                    console.log(range)
+                    const parentElementClassList = range.startContainer.parentElement.classList;
+                    //Caso não seja dentro do popup
+                    if(!parentElementClassList.contains('is-popup-part')) {
+                            _highlighter.highlightText();
+                        } 
+                }
             }
         });
     },
 
     turnOnHighlightMode: function() {
-        console.log('turnonhighliht')
+        console.log('turnOnHighlightMode')
         highlightMode = true;
         chrome.runtime.sendMessage({msg: 'turn_on_highlight_mode'});
     },
 
     turnOffHighlightMode: function() {
-        console.log('TURN OFF HIGHLIGHTY')
+        console.log('turnOffHighlightMode')
         highlightMode = false;
         chrome.runtime.sendMessage({msg: 'turn_off_highlight_mode'});
     },
 
     turnOnHighlightModeFront: function() {
+        console.log('turnOnHighlightMode Front')
         if(document.getElementById('highlight-toggle') != null)
             document.getElementById('highlight-toggle').checked = true;
         highlightMode = true;
     },
 
     turnOffHighlightModeFront: function() {
+        console.log('turnOffHighlightMode Front')
         if(document.getElementById('highlight-toggle') != null)
             document.getElementById('highlight-toggle').checked = false;
         highlightMode = false;
@@ -74,11 +79,14 @@ var _highlighter = {
             wasOpened = true;
             _popup.closePopup();
         }
-            
+        
         var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
         var range = sel.getRangeAt(0);
 
-        if(range.startOffset != 0 && range.endOffset != 0) {
+        if(wasOpened)
+            _popup.openPopup();
+
+        if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY')) {
             const xpath = _xpath.createXPathRangeFromRange(range);
             const selectedText = range.toString();
             const id = _utils.create_UUID();
@@ -86,8 +94,6 @@ var _highlighter = {
     
             this.wrapSelection(range, color, id); 
         }
-        if(wasOpened)
-            _popup.openPopup();
     },
     
     highlightLoadedText: function(xpath, highlightColor, id) {

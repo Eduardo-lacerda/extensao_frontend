@@ -7,11 +7,9 @@ var logsHTML = {};
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     if(message.msg == 'update_log'){
-        highlightMode = message.highlightMode;
         _chromeStorage.updateLog(message.data);
     }
     else if(message.msg == 'update_page_highlights'){
-        highlightMode = message.highlightMode;
         _chromeStorage.stylizeHighlights(message.data);
     }
     return true;
@@ -32,6 +30,7 @@ var _chromeStorage = {
     } */
 
     updateLog: function (data) {
+        console.log('updateLog')
         log = data.log;
         logsHTML = data.logsHTML;
         $('.highlighter-popup-log').html('');
@@ -63,6 +62,7 @@ var _chromeStorage = {
     },
 
     saveHighlight: function(xpath, text, id) {
+        console.log('saveHighlight')
         var allHighlights = log;
 
         if(!allHighlights[currentURL]) //Caso a página atual já tenha sido salva
@@ -83,6 +83,7 @@ var _chromeStorage = {
     },
 
     deleteHighlight: function(highlightId, url) {
+        console.log('deleteHighlight')
         var allHighlights = log;
         var newHighlightArray = [];
         allHighlights[url]['highlights'].forEach(function(highlight) {

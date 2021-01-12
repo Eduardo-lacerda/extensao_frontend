@@ -30,7 +30,7 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
 
 var _popup = {
     openPopup: function() {
-        console.log($('.highlighter-popup-log'))
+        console.log('openPopup')
         if($('.highlighter-popup-log').length == 0){
             popupOpened = true;
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
@@ -76,6 +76,7 @@ var _popup = {
                 });
     
                 $('.highlight-toggle-wrapper #highlight-toggle').click(function() {
+                    console.log('highlight mode:  '+highlightMode)
                     if(!highlightMode) 
                         highlighter.turnOnHighlightMode();
                     else
@@ -112,6 +113,7 @@ var _popup = {
     },
 
     closePopup: function() {
+        console.log('closePopup')
         if($('.highlighter-popup-log').length > 0) {
             popupOpened = false;
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
@@ -120,6 +122,7 @@ var _popup = {
     },
 
     closePopupBack: function() {
+        console.log('closePopupBack')
         chrome.runtime.sendMessage({msg: 'close_popup'});
     },
 
@@ -134,10 +137,12 @@ var _popup = {
     },
 
     toggleFixPopup: function() {
+        console.log('toggleFixPopup')
         chrome.runtime.sendMessage({msg: 'toggle_popup_fixed'});
     },
 
     toggleFixPopupFront: function() {
+        console.log('toggleFixPopupFront')
         clearTimeout(counter);
         popupFixed = !popupFixed;
         $('.header-btn#fix-btn').toggleClass('activated');
