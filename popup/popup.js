@@ -1,21 +1,26 @@
 var popupOpened;
+var toggleOpened;
 var mouseLeave = false;
 var mouseOver = false;
 var counter;
+var toggleCounter;
 var popupFixed = false;
 
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     switch(message.msg) { //Abrir / fechar o popup
         case 'toggle_popup':
+            color = message.data.color;
             if(!message.data.popupOpened) {
                 if(!message.data.highlightMode) {
-                    _highlighter.turnOnHighlightMode();
+                    _highlighter.turnOnHighlightModeBack();
                 }
                 if(message.data.popupFixed)
                     popupFixed = true;
                 else
                     popupFixed = false;
                 _popup.openPopup();
+                if(!message.data.toggleOpened)
+                    _popup.openToggle();
             }
             else {
                 _popup.closePopup();
@@ -23,6 +28,17 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             break;
         case 'toggle_popup_fixed':
             _popup.toggleFixPopupFront();
+            break;
+        case 'set_color':
+            _highlighter.changeHighlightColor(message.data.color);
+            break;
+        case 'toggle_toggle':
+            if(!message.data.toggleOpened) {
+                _popup.openToggle();
+            }
+            else {
+                _popup.closeToggle();
+            }
             break;
     }
     return true;
@@ -35,28 +51,21 @@ var _popup = {
             popupOpened = true;
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
 
-            if(!highlightMode) {
-                $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
-                    $('body').prepend(data);
-                    $('.highlighter-popup-log').html('');
-                    $('.highlighter-popup-log').prepend(logsHTML);
-                });
-            }
-    
-            else {
-                $.get(chrome.runtime.getURL('popup/popup-highlight-mode.html'), function(data) {
-                    $('body').prepend(data);
-                    $('.highlighter-popup-log').html('');
-                    $('.highlighter-popup-log').prepend(logsHTML);
-                });
-            }
+            $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
+                $('body').prepend(data);
+                $('.highlighter-popup-log').html('');
+                $('.highlighter-popup-log').prepend(logsHTML);
+            });
     
             var highlighter = _highlighter;
             var that = this;
             
-            _utils.waitFor(_ => $('.highlighter-popup').length > 0).then(_ => {
+            _utils.waitFor(_ => document.getElementsByClassName('highlighter-popup').length > 0).then(_ => {
+                highlighter.changeHighlightColor(color);
+
                 if(popupFixed)
                     $('.header-btn#fix-btn').addClass('activated');
+                    
                 $('.highlighter-popup').mouseleave(function() { //Ao tirar o mouse do popup
                     if(!popupFixed)
                         _popup.startCounter(3000);
@@ -75,29 +84,15 @@ var _popup = {
                     that.toggleFixPopup();
                 });
     
-                $('.highlight-toggle-wrapper #highlight-toggle').click(function() {
-                    console.log('highlight mode:  '+highlightMode)
-                    if(!highlightMode) 
-                        highlighter.turnOnHighlightMode();
-                    else
-                        highlighter.turnOffHighlightMode();
-                });
-    
                 $('.highlighter-popup .color-btn.yellow').click(function() {
-                    _highlighter.changeHighlightColor('yellow');
-                    $('.highlighter-popup .color-btn').removeClass('selected');
-                    $('.highlighter-popup .color-btn.yellow').addClass('selected');
+                    _highlighter.changeHighlightColorBack('yellow');
                 });
                 $('.highlighter-popup .color-btn.orange').click(function() {
-                    _highlighter.changeHighlightColor('orange');
-                    $('.highlighter-popup .color-btn').removeClass('selected');
-                    $('.highlighter-popup .color-btn.orange').addClass('selected');
+                    _highlighter.changeHighlightColorBack('orange');
                 });
                 
                 $('.highlighter-popup .color-btn.green').click(function() {
-                    _highlighter.changeHighlightColor('green');
-                    $('.highlighter-popup .color-btn').removeClass('selected');
-                    $('.highlighter-popup .color-btn.green').addClass('selected');
+                    _highlighter.changeHighlightColorBack('green');
                 });
     
                 document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
@@ -118,6 +113,8 @@ var _popup = {
             popupOpened = false;
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
             $('.highlighter-popup').remove();
+            if(toggleOpened && !highlightMode)
+                this.startToggleCounter(5000);
         }
     },
 
@@ -136,6 +133,15 @@ var _popup = {
         }
     },
 
+    startToggleCounter: function(time) {
+        var that = this;
+        console.log('startToggleCounter')
+        toggleCounter = setTimeout(function(){
+            if (!document.hidden)
+                that.closeToggleBack();
+        }, time);
+    },
+
     toggleFixPopup: function() {
         console.log('toggleFixPopup')
         chrome.runtime.sendMessage({msg: 'toggle_popup_fixed'});
@@ -146,7 +152,54 @@ var _popup = {
         clearTimeout(counter);
         popupFixed = !popupFixed;
         $('.header-btn#fix-btn').toggleClass('activated');
-    }
+    },
+
+    openToggle: function() {
+        console.log('openToggle')
+        if($('.highlight-toggle-wrapper').length == 0){
+            toggleOpened = true;
+            chrome.runtime.sendMessage({msg: 'toggle_toggle', data: {toggleOpened: toggleOpened}});
+
+            $.get(chrome.runtime.getURL('popup/toggle.html'), function(data) {
+                $('body').prepend(data);
+            });
+    
+            var highlighter = _highlighter;
+            var that = this;
+            
+            _utils.waitFor(_ => document.getElementsByClassName('highlight-toggle-wrapper').length > 0).then(_ => {
+                if(highlightMode)
+                    document.getElementById('highlight-toggle').checked = true;
+
+                $('#highlight-toggle').click(function() {
+                    console.log(highlightMode)
+                    if(highlightMode) {
+                        highlighter.turnOffHighlightModeBack();
+                        if(!popupOpened)
+                            _popup.startToggleCounter(5000);
+                    }
+                    else {
+                        highlighter.turnOnHighlightModeBack();
+                        clearTimeout(toggleCounter);
+                    }
+                });
+            });
+        }
+    },
+
+    closeToggle: function() {
+        console.log('closeToggle')
+        if($('.highlight-toggle-wrapper').length > 0) {
+            toggleOpened = false;
+            chrome.runtime.sendMessage({msg: 'toggle_toggle', data: {toggleOpened: toggleOpened}});
+            $('.highlight-toggle-wrapper').remove();
+        }
+    },
+
+    closeToggleBack: function() {
+        console.log('closeToggleBack')
+        chrome.runtime.sendMessage({msg: 'close_toggle'});
+    },
 }
 
 

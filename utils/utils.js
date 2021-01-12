@@ -83,7 +83,7 @@ var _utils = {
     waitFor: function(conditionFunction) {
         const poll = resolve => {
             if(conditionFunction()) resolve();
-            else setTimeout(_ => poll(resolve), 400);
+            else setTimeout(_ => poll(resolve), 50);
         }
         return new Promise(poll);
     }

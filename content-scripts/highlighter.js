@@ -8,11 +8,11 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case 'toggle_highlight_mode':
             if(message.data.highlightMode) {
                 console.log('turn on front')
-                _highlighter.turnOnHighlightModeFront();
+                _highlighter.turnOnHighlightMode();
             }
             else {
                 console.log('turn off front')
-                _highlighter.turnOffHighlightModeFront();
+                _highlighter.turnOffHighlightMode();
             }
             break;
     }
@@ -47,26 +47,26 @@ var _highlighter = {
         });
     },
 
-    turnOnHighlightMode: function() {
+    turnOnHighlightModeBack: function() {
         console.log('turnOnHighlightMode')
         highlightMode = true;
         chrome.runtime.sendMessage({msg: 'turn_on_highlight_mode'});
     },
 
-    turnOffHighlightMode: function() {
+    turnOffHighlightModeBack: function() {
         console.log('turnOffHighlightMode')
         highlightMode = false;
         chrome.runtime.sendMessage({msg: 'turn_off_highlight_mode'});
     },
 
-    turnOnHighlightModeFront: function() {
+    turnOnHighlightMode: function() {
         console.log('turnOnHighlightMode Front')
         if(document.getElementById('highlight-toggle') != null)
             document.getElementById('highlight-toggle').checked = true;
         highlightMode = true;
     },
 
-    turnOffHighlightModeFront: function() {
+    turnOffHighlightMode: function() {
         console.log('turnOffHighlightMode Front')
         if(document.getElementById('highlight-toggle') != null)
             document.getElementById('highlight-toggle').checked = false;
@@ -135,6 +135,8 @@ var _highlighter = {
             }
         }
 
+        _popup.openPopup();
+
         // iterate whilst all tests for being a highlight span node are passed
         while (this.isHighlightSpan(span)) {
             //
@@ -157,7 +159,6 @@ var _highlighter = {
             span = nodeRemoved.nextSpan;
         }
 
-        _popup.openPopup();
         return true;
     },
     
@@ -299,7 +300,13 @@ var _highlighter = {
         }
     },
 
+    changeHighlightColorBack: function(newColor) {
+        chrome.runtime.sendMessage({msg: 'set_color', data: {color: newColor}});
+    },
+
     changeHighlightColor: function(newColor){
+        $('.highlighter-popup .color-btn').removeClass('selected');
+        $('.highlighter-popup .color-btn.'+newColor).addClass('selected');
         color = newColor;
     },
 

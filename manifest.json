@@ -17,7 +17,7 @@
   ],
   "web_accessible_resources": [
     "popup/popup.html",
-    "popup/popup-highlight-mode.html"
+    "popup/toggle.html"
   ],
   "browser_action": {
   },

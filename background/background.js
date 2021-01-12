@@ -1,6 +1,8 @@
 var highlightMode = false;
 var popupOpened = false;
 var popupFixed = false;
+var color = 'yellow';
+var toggleOpened = false;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -17,6 +19,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
         if(popupOpened) {
             popupOpened = !popupOpened;
+            if(toggleOpened)
+                toggleOpened = !toggleOpened;
             togglePopup();
         }
         chrome.storage.sync.set({'highlightMode': false}, function() {});
@@ -37,10 +41,10 @@ chrome.browserAction.onClicked.addListener(function (){
 
 
 function togglePopup() {
-    console.log(popupOpened)
+    console.log('toggle opened: ' + toggleOpened)
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened}});
         });
     });
 }
@@ -48,7 +52,7 @@ function togglePopup() {
 function togglePopupOption(_popupOpened) {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened}});
         });
     });
 }
@@ -66,6 +70,23 @@ function toggleHighlightMode(activated) {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_highlight_mode', data: {highlightMode: activated}});
+        });
+    });
+}
+
+function setColor(newColor) {
+    color = newColor;
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'set_color', data: {color: newColor}});
+        });
+    });
+}
+
+function toggleToggle(opened) {
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_toggle', data: {toggleOpened: opened}});
         });
     });
 }
@@ -94,6 +115,15 @@ chrome.runtime.onMessage.addListener(
                 break;
             case 'toggle_popup_fixed':
                 togglePopupFixed();
+                break;
+            case 'set_color':
+                setColor(message.data.color);
+                break;
+            case 'toggle_toggle':
+                toggleOpened = message.data.toggleOpened;
+                break;
+            case 'close_toggle':
+                toggleToggle(true);
                 break;
         }
     }

@@ -14,11 +14,11 @@
 }
 
 .highlighter-popup.log {
-    top: 15px;
+    top: 60px;
 }
 
 .highlighter-popup.controller {
-    top: 290px;
+    top: 340px;
 }
 
 .highlighter-popup-header .colors-wrapper {
@@ -28,7 +28,7 @@
     padding-top: 10px;
     box-sizing: border-box;
     width: 98px;
-    margin-right: 102px;
+    margin-right: 147px;
 }
 
 .highlighter-popup-header {
@@ -233,6 +233,10 @@
     height: 42px;
     margin-left: 9px;
     justify-content: space-evenly;
+    position: fixed;
+    z-index: 2000000000;
+    right: 4px;
+    top: 1px;
 }
 
 .toggle {
