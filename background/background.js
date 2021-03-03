@@ -17,31 +17,36 @@ chrome.runtime.onInstalled.addListener(function() {
 //Ao atualizar a página
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
+        console.log('update')
+        _chromeStorage.getRating(tabId);
         if(popupOpened) {
             popupOpened = !popupOpened;
             if(toggleOpened)
                 toggleOpened = !toggleOpened;
             togglePopup();
         }
-        chrome.storage.sync.set({'highlightMode': false}, function() {});
+        chrome.storage.local.set({'highlightMode': false}, function() {});
         //Carregar os highlights já feitos na página e o log
         _chromeStorage.getHighlights('updateAll');
         //--------------------------------------
     }
 });
 
+//Ao trocar de tab
+chrome.tabs.onActivated.addListener(function(activeInfo) {
+    _chromeStorage.getRating(activeInfo.tabId);
+});
+
 //Ao clicar no ícone
 chrome.browserAction.onClicked.addListener(function (){
     console.log('clicou')
     togglePopup();
-
     //Resetar highlights
-    //chrome.storage.sync.set({'allHighlights': {}}, function() {});
+    //chrome.storage.local.set({'allHighlights': {}}, function() {});
 });
 
 
 function togglePopup() {
-    console.log('toggle opened: ' + toggleOpened)
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened}});
@@ -57,11 +62,11 @@ function togglePopupOption(_popupOpened) {
     });
 }
 
-function togglePopupFixed() {
-    popupFixed = !popupFixed;
+function togglePopupFixed(_popupFixed) {
+    popupFixed = !_popupFixed;
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup_fixed'});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup_fixed', data: {popupFixed: _popupFixed}});
         });
     });
 }
@@ -114,7 +119,7 @@ chrome.runtime.onMessage.addListener(
                 toggleHighlightMode(false);
                 break;
             case 'toggle_popup_fixed':
-                togglePopupFixed();
+                togglePopupFixed(message.data.popupFixed);
                 break;
             case 'set_color':
                 setColor(message.data.color);

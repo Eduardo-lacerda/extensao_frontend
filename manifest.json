@@ -2,22 +2,32 @@
   "name": "Visualiz",
   "version": "1.0",
   "description": "Build an Extension!",
-  "permissions": ["storage", "declarativeContent", "activeTab", "<all_urls>", "tabs", "unlimitedStorage"],
+  "permissions": ["storage", "declarativeContent", "activeTab", "<all_urls>", "tabs", "unlimitedStorage", "<all_urls>", "https://visualiz.com.br/*"],
   "background": {
-    "scripts": ["background/background.js", "background/dataControlBack.js"],
+    "scripts": ["background/background.js", "background/dataControlBack.js", "utils/jquery.js",
+      "utils/material.js", "utils/utils.js"],
     "persistent": false
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "css": ["css/highlight.css", "css/popup.css"],
-      "js": ["utils/jquery.js", "content-scripts/xpath.js", "popup/popup.js",
+      "css": ["css/highlight.css", "css/popup.css", "css/toggle.css"],
+      "js": ["utils/jquery.js", "content-scripts/xpath.js", "popup/popup.js", "utils/material.js",
         "content-scripts/dataControl.js", "content-scripts/highlighter.js", "utils/utils.js"]
     }
   ],
   "web_accessible_resources": [
     "popup/popup.html",
-    "popup/toggle.html"
+    "popup/toggle.html",
+    "popup/loginPopup.html",
+    "popup/initialPopup.html",
+    "popup/registerPopup.html",
+    "popup/svg/bad.html",
+    "popup/svg/good.html",
+    "popup/svg/great.html",
+    "popup/success.html",
+    "popup/error.html",
+    "popup/base.html"
   ],
   "browser_action": {
   },

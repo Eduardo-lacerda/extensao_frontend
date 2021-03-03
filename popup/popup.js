@@ -5,11 +5,19 @@ var mouseOver = false;
 var counter;
 var toggleCounter;
 var popupFixed = false;
+var ratingData = {};
+var messageData = {
+    'msg': '',
+    'type': ''
+}
+var jwt_token;
 
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     switch(message.msg) { //Abrir / fechar o popup
         case 'toggle_popup':
             color = message.data.color;
+            console.log(message);
+            console.log(localStorage.getItem('jwt_token'))
             if(!message.data.popupOpened) {
                 if(!message.data.highlightMode) {
                     _highlighter.turnOnHighlightModeBack();
@@ -18,7 +26,19 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
                     popupFixed = true;
                 else
                     popupFixed = false;
-                _popup.openPopup();
+                
+                chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                    console.log(data);
+                    if(data['destaquei_jwt_token']) {
+                        jwt_token = data.destaquei_jwt_token;
+                        _popup.openPopup('default');
+                    }
+                    else { //Se não estiver logado
+                        console.log('não logado')
+                        _popup.openPopup('initial');
+                    }
+                });
+
                 if(!message.data.toggleOpened)
                     _popup.openToggle();
             }
@@ -27,7 +47,10 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             }
             break;
         case 'toggle_popup_fixed':
-            _popup.toggleFixPopupFront();
+            if(!message.data.popupFixed)
+                _popup.fixPopup();
+            else
+                _popup.unfixPopup();
             break;
         case 'set_color':
             _highlighter.changeHighlightColor(message.data.color);
@@ -40,58 +63,178 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
                 _popup.closeToggle();
             }
             break;
+        case 'update_rating':
+            ratingData = message.data.ratingData;
+            _popup.updateRating();
+            break;
+        case 'success_message':
+            _popup.showMessage(message.data, 'success');
+            break;
+        case 'error_message':
+            _popup.showMessage(message.data, 'error');
+            break;
+        case 'logged_in':
+            chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                console.log(data);
+                if(data['destaquei_jwt_token'])
+                    jwt_token = data.destaquei_jwt_token;
+            });
+            _popup.openPopup('default');
+            break;
     }
     return true;
 });
 
 var _popup = {
-    openPopup: function() {
-        console.log('openPopup')
-        if($('.highlighter-popup-log').length == 0){
-            popupOpened = true;
-            chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
+    showMessage: function(data, type) {
+        messageData = data;
+        _popup.openPopup(type);
+    },
 
-            $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
+    openPopup: function(screen) {
+        console.log('openPopup');   
+        console.log(screen)
+
+        if($('.highlighter-popup').length == 0){
+            $.get(chrome.runtime.getURL('popup/base.html'), function(data) {
                 $('body').prepend(data);
-                $('.highlighter-popup-log').html('');
-                $('.highlighter-popup-log').prepend(logsHTML);
             });
+        }
+
+        _utils.waitFor(_ => document.getElementsByClassName('highlighter-popup-body').length > 0).then(_ => {
+            $('.highlighter-popup.log .highlighter-popup-body').html('');
+        
+            popupOpened = true;
+            clearTimeout(counter);
+            chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
+            
+            switch(screen) {
+                case 'default':
+                    $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup-log').html('');
+                        $('.highlighter-popup-log').append(logsHTML);
+                    });
+                    break;
+                case 'initial':
+                    console.log('initial screen')
+                    $.get(chrome.runtime.getURL('popup/initialPopup.html'), function(data) {
+                        console.log(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                    });
+                    break;
+                case 'register':
+                    $.get(chrome.runtime.getURL('popup/registerPopup.html'), function(data) {
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                    });
+                    break;
+                case 'login':
+                    $.get(chrome.runtime.getURL('popup/loginPopup.html'), function(data) {
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                    });
+                    break;
+                case 'success':
+                    $.get(chrome.runtime.getURL('popup/success.html'), function(data) {
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                    });
+                    break;
+                case 'error':
+                    $.get(chrome.runtime.getURL('popup/error.html'), function(data) {
+                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                    });
+                    break;
+            }
     
             var highlighter = _highlighter;
             var that = this;
+    
+            clearTimeout(toggleCounter);
             
-            _utils.waitFor(_ => document.getElementsByClassName('highlighter-popup').length > 0).then(_ => {
+            _utils.waitFor(_ => document.getElementsByClassName('highlight-toggle-container').length > 0).then(_ => {
                 highlighter.changeHighlightColor(color);
-
+                that.updateRating();
+    
+                switch(screen) {
+                    case 'initial':
+                        document.getElementById('register-cta').addEventListener('click', function(){
+                            that.openPopup('register');
+                        });
+                        document.getElementById('login-cta').addEventListener('click', function(){
+                            that.openPopup('login');
+                        });
+                        break;
+                    case 'register':
+                        mdc.autoInit();
+    
+                        document.getElementById('register-btn').addEventListener('click', function(){
+                            var name = document.getElementById('name-input').value;
+                            var email = document.getElementById('email-input').value;
+                            var password = document.getElementById('password-input').value;
+        
+                            chrome.runtime.sendMessage({msg: 'register_user', data: {name: name, email: email, password: password}});
+                        });
+                        document.getElementById('cancel-btn').addEventListener('click', function(){
+                            that.openPopup('initial');
+                        });
+                        break;
+                    case 'login':
+                        document.getElementById('login-btn').addEventListener('click', function(){
+                            var email = document.getElementById('email-input').value;
+                            var password = document.getElementById('password-input').value;
+        
+                            chrome.runtime.sendMessage({msg: 'login_user', data: {email: email, password: password}});
+                        });
+                        document.getElementById('cancel-btn').addEventListener('click', function(){
+                            that.openPopup('initial');
+                        });
+                        break;
+                    case 'success':
+                        document.getElementById('success-msg').innerHTML = messageData.msg;
+                        document.getElementById('cancel-btn').addEventListener('click', function(){
+                            that.openPopup('initial');
+                        });
+                        break;
+                    case 'error':
+                        document.getElementById('error-msg').innerHTML = messageData.msg;
+                        document.getElementById('cancel-btn').addEventListener('click', function(){
+                            if(messageData.type == 'register')
+                                that.openPopup('register');
+                            else
+                                that.openPopup('initial');
+                        });
+                        break;
+                };
+    
                 if(popupFixed)
                     $('.header-btn#fix-btn').addClass('activated');
                     
-                $('.highlighter-popup').mouseleave(function() { //Ao tirar o mouse do popup
+                $('.highlighter-popup').on('mouseleave', function() { //Ao tirar o mouse do popup
                     if(!popupFixed)
                         _popup.startCounter(3000);
                 });
     
-                $('.highlighter-popup').mouseover(function() { //Ao passar o mouse por cima
+                $('.highlighter-popup').on('mouseover', function() { //Ao passar o mouse por cima
                     if(!popupFixed)
                         clearTimeout(counter);
                 });
                 
-                $('.header-btn#close-btn').click(function() {
+                $('.header-btn#close-btn').on('click', function() {
                     that.closePopupBack();
                 });
     
-                $('.header-btn#fix-btn').click(function() {
-                    that.toggleFixPopup();
+                $('.header-btn#fix-btn').on('click', function() {
+                    that.toggleFixPopup(popupFixed);
                 });
     
-                $('.highlighter-popup .color-btn.yellow').click(function() {
+                $('.highlighter-popup .color-btn.yellow').on('click', function() {
                     _highlighter.changeHighlightColorBack('yellow');
                 });
-                $('.highlighter-popup .color-btn.orange').click(function() {
+                $('.highlighter-popup .color-btn.orange').on('click', function() {
                     _highlighter.changeHighlightColorBack('orange');
                 });
                 
-                $('.highlighter-popup .color-btn.green').click(function() {
+                $('.highlighter-popup .color-btn.green').on('click', function() {
+                    console.log('opa green');
                     _highlighter.changeHighlightColorBack('green');
                 });
     
@@ -104,13 +247,14 @@ var _popup = {
                 });
                 _popup.startCounter(3000);
             });
-        }
+        });
     },
 
     closePopup: function() {
         console.log('closePopup')
-        if($('.highlighter-popup-log').length > 0) {
+        if($('.highlighter-popup').length > 0) {
             popupOpened = false;
+            clearTimeout(counter);
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
             $('.highlighter-popup').remove();
             if(toggleOpened && !highlightMode)
@@ -144,14 +288,21 @@ var _popup = {
 
     toggleFixPopup: function() {
         console.log('toggleFixPopup')
-        chrome.runtime.sendMessage({msg: 'toggle_popup_fixed'});
+        chrome.runtime.sendMessage({msg: 'toggle_popup_fixed', data: {popupFixed: popupFixed}});
     },
 
-    toggleFixPopupFront: function() {
-        console.log('toggleFixPopupFront')
+    fixPopup: function() {
+        console.log('fixPopup')
         clearTimeout(counter);
-        popupFixed = !popupFixed;
-        $('.header-btn#fix-btn').toggleClass('activated');
+        popupFixed = true;
+        $('.header-btn#fix-btn').addClass('activated');
+
+    },
+
+    unfixPopup: function() {
+        console.log('unfixPopup')
+        popupFixed = false;
+        $('.header-btn#fix-btn').removeClass('activated');
     },
 
     openToggle: function() {
@@ -171,7 +322,7 @@ var _popup = {
                 if(highlightMode)
                     document.getElementById('highlight-toggle').checked = true;
 
-                $('#highlight-toggle').click(function() {
+                $('#highlight-toggle').on('click', function() {
                     console.log(highlightMode)
                     if(highlightMode) {
                         highlighter.turnOffHighlightModeBack();
@@ -199,6 +350,33 @@ var _popup = {
     closeToggleBack: function() {
         console.log('closeToggleBack')
         chrome.runtime.sendMessage({msg: 'close_toggle'});
+    },
+
+    updateRating: function() {
+        if(popupOpened) {
+            console.log('updateRatingFront')
+            var pageBar = $('#page-rate .rate-bar-value');
+            var globalBar = $('#global-rate .rate-bar-value');
+            const pageWidth = Math.round((ratingData.page / 5 * 100)) + '%'
+            const globalWidth = Math.round((ratingData.global / 5 * 100)) + '%'
+            pageBar.text((''+ratingData.page).replace('.', ','));
+            pageBar.width(pageWidth);
+            globalBar.text((''+ratingData.global).replace('.', ','));
+            globalBar.width(globalWidth);
+
+            var classification = null;
+            if(ratingData.global <= (5 / 3))
+                classification = 'bad';
+            if(ratingData.global >= (5 / 3) && ratingData.global <= (5 / 3 * 2))
+                classification = 'good';
+            if(ratingData.global >= (5 / 3 * 2))
+                classification = 'great';
+            console.log(classification);
+            $.get(chrome.runtime.getURL('popup/svg/' + classification + '.html'), function(data) {
+                $('.page-classification').html('');
+                $('.page-classification').append(data);
+            });
+        }
     },
 }
 

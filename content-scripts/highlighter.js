@@ -36,10 +36,9 @@ var _highlighter = {
                 var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
                 if(sel.rangeCount > 0){
                     var range = sel.getRangeAt(0);
-                    console.log(range)
                     const parentElementClassList = range.startContainer.parentElement.classList;
                     //Caso não seja dentro do popup
-                    if(!parentElementClassList.contains('is-popup-part')) {
+                    if(!parentElementClassList.contains('ipp')) {
                             _highlighter.highlightText();
                         } 
                 }
@@ -49,28 +48,30 @@ var _highlighter = {
 
     turnOnHighlightModeBack: function() {
         console.log('turnOnHighlightMode')
-        highlightMode = true;
         chrome.runtime.sendMessage({msg: 'turn_on_highlight_mode'});
     },
 
     turnOffHighlightModeBack: function() {
         console.log('turnOffHighlightMode')
-        highlightMode = false;
         chrome.runtime.sendMessage({msg: 'turn_off_highlight_mode'});
     },
 
     turnOnHighlightMode: function() {
-        console.log('turnOnHighlightMode Front')
-        if(document.getElementById('highlight-toggle') != null)
-            document.getElementById('highlight-toggle').checked = true;
-        highlightMode = true;
+        if(!highlightMode) {
+            console.log('turnOnHighlightMode Front')
+            if(document.getElementById('highlight-toggle') != null)
+                document.getElementById('highlight-toggle').checked = true;
+            highlightMode = true;
+        }
     },
 
     turnOffHighlightMode: function() {
-        console.log('turnOffHighlightMode Front')
-        if(document.getElementById('highlight-toggle') != null)
-            document.getElementById('highlight-toggle').checked = false;
-        highlightMode = false;
+        if(highlightMode) {
+            console.log('turnOffHighlightMode Front')
+            if(document.getElementById('highlight-toggle') != null)
+                document.getElementById('highlight-toggle').checked = false;
+            highlightMode = false;
+        }
     },
 
     highlightText: function() {
@@ -84,7 +85,7 @@ var _highlighter = {
         var range = sel.getRangeAt(0);
 
         if(wasOpened)
-            _popup.openPopup();
+            _popup.openPopup('default');
 
         if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY')) {
             const xpath = _xpath.createXPathRangeFromRange(range);
@@ -135,7 +136,7 @@ var _highlighter = {
             }
         }
 
-        _popup.openPopup();
+        _popup.openPopup('default');
 
         // iterate whilst all tests for being a highlight span node are passed
         while (this.isHighlightSpan(span)) {

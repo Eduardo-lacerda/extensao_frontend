@@ -30,7 +30,7 @@ var _chromeStorage = {
     } */
 
     updateLog: function (data) {
-        console.log('updateLog')
+        console.log('updateLog');
         log = data.log;
         logsHTML = data.logsHTML;
         $('.highlighter-popup-log').html('');
@@ -48,38 +48,20 @@ var _chromeStorage = {
 
     stylizeHighlights: function (data) {
         console.log('stylize')
-        //Se a url já foi salva
-        if(data[currentURL]) {
-            //Se existem highlights na página atual
-            if(data[currentURL]['highlights']) {
-                var highlights = data[currentURL]['highlights'];
-                //Estilizar highlights
-                highlights.forEach(highlight => {
-                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
-                });
-            }
+        if(data != undefined) {
+            data.forEach(highlight => {
+                _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
+            });
         }
     },
 
-    saveHighlight: function(xpath, text, id) {
-        console.log('saveHighlight')
-        var allHighlights = log;
+    saveHighlight: function(xpath, text) {
+        console.log('saveHighlight');
+        var highlight = {'text': text, 'xpath': xpath, 'color': color};
+        highlight['icon_url'] = _utils.getPageIcons()[0];
+        highlight['url'] = currentURL;
 
-        if(!allHighlights[currentURL]) //Caso a página atual já tenha sido salva
-            allHighlights[currentURL] = {};
-        var currentPage = allHighlights[currentURL];
-        
-        var highlight = {'text': text, 'xpath': xpath, 'color': color, 'id': id};
-        if(!currentPage['highlights']) //Caso não existam highlights na página atual
-            currentPage['highlights'] = [];
-        currentPage['highlights'].push(highlight);
-        const pageIcon = _utils.getPageIcons();
-        currentPage['icon'] = pageIcon[0];
-        allHighlights[currentURL] = currentPage;
-        chrome.storage.sync.set({'allHighlights': allHighlights}, function() {});
-
-        //Atualizar log
-        chrome.runtime.sendMessage({msg: 'update_log'});
+        chrome.runtime.sendMessage({msg: 'save_highlight', data: highlight});
     },
 
     deleteHighlight: function(highlightId, url) {
@@ -93,7 +75,7 @@ var _chromeStorage = {
 
         allHighlights[url]['highlights'] = newHighlightArray;
 
-        chrome.storage.sync.set({'allHighlights': allHighlights}, function() {});
+        chrome.storage.local.set({'allHighlights': allHighlights}, function() {});
 
         //Atualizar log
         chrome.runtime.sendMessage({msg: 'update_all'});
