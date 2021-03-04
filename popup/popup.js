@@ -17,8 +17,10 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case 'toggle_popup':
             color = message.data.color;
             if(!message.data.popupOpened) {
-                if(!message.data.highlightMode) {
-                    _highlighter.turnOnHighlightModeBack();
+                if(!message.data.updatedPage) { //Se não tiver atualizado a página, mas sim clicado no ícone
+                    if(!message.data.highlightMode) { //Se tiver o highlight mode tiver desligado, ligar
+                        _highlighter.turnOnHighlightModeBack();
+                    }
                 }
                 if(message.data.popupFixed)
                     popupFixed = true;
@@ -187,6 +189,9 @@ var _popup = {
                         document.getElementById('cancel-btn').addEventListener('click', function(){
                             that.openPopup('initial');
                         });
+                        document.getElementById('register-cta').addEventListener('click', function(){
+                            that.openPopup('register');
+                        });
                         break;
                     case 'success':
                         document.getElementById('success-msg').innerHTML = messageData.msg;
@@ -237,12 +242,17 @@ var _popup = {
                     console.log('opa green');
                     _highlighter.changeHighlightColorBack('green');
                 });
+
+                $('.logout-btn').on('click', function() {
+                    chrome.storage.local.remove('destaquei_jwt_token');
+                    _popup.openPopup('initial');
+                });
     
                 document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
                     item.addEventListener('click', event => {
                         const highlightId = $(event.target).attr('id');
-                        const url = $(event.target).parent().attr('id');
-                        _chromeStorage.deleteHighlight(highlightId, url);
+                        //const url = $(event.target).parent().attr('id');
+                        _chromeStorage.deleteHighlight(highlightId);
                     })
                 });
                 _popup.startCounter(3000);

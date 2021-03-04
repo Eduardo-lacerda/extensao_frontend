@@ -36,6 +36,7 @@
     width: 98px;
     margin-right: 0;
     width: 30%;
+    margin-right: 106px;
 }
 
 .highlighter-popup-header {
@@ -45,7 +46,7 @@
     border-radius: 14px 14px 0 0;
     display: flex;
     padding: 0 5px;
-    justify-content: space-between;
+    /* justify-content: space-between; */
     box-sizing: border-box;
 }
 
@@ -284,7 +285,14 @@
     transform: translateX(11px);
 }
 
+.logout-wrapper {
+    margin-right: 6px;
+    margin-left: 2px;
+}
 
+.logout-btn {
+    padding-left: 2px !important;
+}
 
 
 /*CONTEUDO          */

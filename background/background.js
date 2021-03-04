@@ -3,6 +3,7 @@ var popupOpened = false;
 var popupFixed = false;
 var color = 'yellow';
 var toggleOpened = false;
+var updatedPage = false;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -16,8 +17,10 @@ chrome.runtime.onInstalled.addListener(function() {
 
 //Ao atualizar a página
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    updatedPage = true;
     if (changeInfo.status == 'complete') {
         console.log('update')
+        console.log('highlightMode: ' + highlightMode)
         _chromeStorage.getRating(tabId);
         if(popupOpened) {
             popupOpened = !popupOpened;
@@ -40,6 +43,7 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 //Ao clicar no ícone
 chrome.browserAction.onClicked.addListener(function (){
     console.log('clicou')
+    updatedPage = false;
     togglePopup();
     //Resetar highlights
     //chrome.storage.local.set({'allHighlights': {}}, function() {});
@@ -49,7 +53,7 @@ chrome.browserAction.onClicked.addListener(function (){
 function togglePopup() {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage}});
         });
     });
 }
@@ -57,7 +61,7 @@ function togglePopup() {
 function togglePopupOption(_popupOpened) {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage}});
         });
     });
 }

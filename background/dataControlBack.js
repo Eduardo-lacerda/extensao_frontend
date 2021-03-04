@@ -20,68 +20,52 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case "save_highlight":
             _chromeStorage.saveHighlight(message.data);
             break;
+        case "delete_highlight":
+            _chromeStorage.removeHighlight(message.data.highlightId);
+            break;
     }
     return true;
 });
 //--------------------------------------
 
 var _chromeStorage = {
-    /* Estrutura do objeto:
-    {
-        'allHighlights': {
-            "http://example": {
-                "highlights": [
-                    {"xpath": "teste", "text": "exemplo de highlight", color:"yellow"}
-                ]
-                "icon": "https://icon.png"
-            }
-        }
-    } */
-
     getHighlights: function (callBack) {
         var that = this;
-        var userEmail = '';
 
-        chrome.storage.local.get('user_email', function(data) {
-            if(data['user_email']) {
-                userEmail = data['user_email'];
-
-                chrome.storage.local.get('destaquei_jwt_token', function(data) {
-                    console.log(data);
-                    if(data['destaquei_jwt_token']) {
-                        $.ajax({
-                            url : "https://visualiz.com.br/highlights?email="+userEmail,
-                            headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
-                            contentType: "application/json",
-                            dataType: "json",
-                            type : 'get',
-                            crossDomain : true,
-                            success: function(response) {
-                                console.log(response)
-                                if(!response.error){  
-                                    var data = response.results;
-                                    if(callBack == 'updateAll') {
-                                        that.updateLog(data.highlights);
-                                        that.updatePageHighlights(data.highlights);
-                                        console.log('get highlights update all')
-                                    }
-                                    else if(callBack == 'updateLog')
-                                        that.updateLog(data.highlights);
-                                    else if(callBack == 'updatePageHighlights')
-                                        that.updatePageHighlights(data.highlights);
-                                }
-                            },
-                            error: function(response) {
-                                console.log(response)
-                                //Se code for 401, logar de novo
-                                if(response.error) {
-                                    if(response.errors)
-                                        that.sendToFront({msg: 'error_message', data: {msg: response.errors.msg, type: "get_highlights"}});
-                                    else
-                                        that.sendToFront({msg: 'error_message', data: {msg: "Erro no servidor", type: "get_highlights"}});
-                                }
+        chrome.storage.local.get('destaquei_jwt_token', function(data) {
+            console.log(data);
+            if(data['destaquei_jwt_token']) {
+                $.ajax({
+                    url : "https://visualiz.com.br/highlights",
+                    headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
+                    contentType: "application/json",
+                    dataType: "json",
+                    type : 'get',
+                    crossDomain : true,
+                    success: function(response) {
+                        console.log(response)
+                        if(!response.error){  
+                            var data = response.results;
+                            if(callBack == 'updateAll') {
+                                that.updateLog(data.highlights);
+                                that.updatePageHighlights(data.highlights);
+                                console.log('get highlights update all')
                             }
-                        });
+                            else if(callBack == 'updateLog')
+                                that.updateLog(data.highlights);
+                            else if(callBack == 'updatePageHighlights')
+                                that.updatePageHighlights(data.highlights);
+                        }
+                    },
+                    error: function(response) {
+                        console.log(response)
+                        //Se code for 401, logar de novo
+                        if(response.error) {
+                            if(response.errors)
+                                that.sendToFront({msg: 'error_message', data: {msg: response.errors.msg, type: "get_highlights"}});
+                            else
+                                that.sendToFront({msg: 'error_message', data: {msg: "Erro no servidor", type: "get_highlights"}});
+                        }
                     }
                 });
             }
@@ -115,6 +99,7 @@ var _chromeStorage = {
                             console.log(response)
                             if(!response.error){  
                                 that.getHighlights('updateLog');
+                                that.sendToFront({msg: 'wrap_highlight', data: {highlightId: response.results.id}})
                             }
                         },
                         error: function(response) {
@@ -139,8 +124,9 @@ var _chromeStorage = {
         if(data != undefined) {
             data.forEach(highlight => {
                 highlight.color = highlight.color[0];
-                const iconImg = '<div class="icon-wrapper ipp"><a target="_blank" href="' + highlight.url +'"><img class="log-web-icon ipp" src="' + highlight.icon_url + '"></a></div>';
-                var logHTML = '<a target="_blank" href="' + highlight.url + '#:~:text=' + highlight.text + '"><div class="log-wrapper ipp">';
+                highlight['id'] = highlight['_id'];
+                const iconImg = '<div class="icon-wrapper ipp"><a target="_blank" class="ipp" href="' + highlight.url +'"><img class="log-web-icon ipp" src="' + highlight.icon_url + '"></a></div>';
+                var logHTML = '<a rel="noopener" target="_blank" class="ipp" href="' + highlight.url + '#:~:text=' + encodeURIComponent(highlight.text) + '"><div class="log-wrapper ipp">';
                 var text = '<p class="log-text ipp '+ highlight.color +'">' + highlight.text + '</p>';
                 logHTML = logHTML + text + '<div class="log-icons ipp" id="'+ highlight.url +'">';
                 logHTML = logHTML + iconImg + '<i id="'+ highlight.id +'" class="ipp material-icons-outlined log-delete">delete</i></div></div></a>';
@@ -224,6 +210,37 @@ var _chromeStorage = {
                 console.log(response);
             }
        })
+    },
+
+    removeHighlight: function(highlightId) {
+        var that = this;
+        chrome.storage.local.get('destaquei_jwt_token', function(data) {
+            if(data['destaquei_jwt_token']) {
+                $.ajax({
+                    url : "https://visualiz.com.br/highlights/" + highlightId,
+                    headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
+                    contentType: "application/json",
+                    dataType: "json",
+                    type : 'delete',
+                    crossDomain : true,
+                    success: function(response) {
+                        console.log(response)
+                        if(!response.error){  
+                            that.getHighlights('updateAll');
+                        }
+                    },
+                    error: function(response) {
+                        console.log(response)
+                        if(response.error) {
+                            if(response.errors)
+                                _popup.showMessage({msg: response.errors, type: "delete_highlight"}, 'error');
+                            else
+                                _popup.showMessage({msg: 'Erro no servidor', type: "save_highlight"}, 'error');
+                        }
+                    }
+                });
+            }
+        });
     },
     
     sendToFront: function(data) {

@@ -6,11 +6,13 @@ var logsHTML = {};
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
-    if(message.msg == 'update_log'){
-        _chromeStorage.updateLog(message.data);
-    }
-    else if(message.msg == 'update_page_highlights'){
-        _chromeStorage.stylizeHighlights(message.data);
+    switch(message.msg) {
+        case "update_log":
+            _chromeStorage.updateLog(message.data);
+            break;
+        case "update_page_highlights":
+            _chromeStorage.stylizeHighlights(message.data);
+            break;
     }
     return true;
 });
@@ -47,7 +49,8 @@ var _chromeStorage = {
     },
 
     stylizeHighlights: function (data) {
-        console.log('stylize')
+        console.log('stylize');
+        console.log(data);
         if(data != undefined) {
             data.forEach(highlight => {
                 _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
@@ -64,25 +67,13 @@ var _chromeStorage = {
         chrome.runtime.sendMessage({msg: 'save_highlight', data: highlight});
     },
 
-    deleteHighlight: function(highlightId, url) {
+    deleteHighlight: function(highlightId) {
         console.log('deleteHighlight')
-        var allHighlights = log;
-        var newHighlightArray = [];
-        allHighlights[url]['highlights'].forEach(function(highlight) {
-            if(highlight.id != highlightId)
-                newHighlightArray.push(highlight);
-        });
-
-        allHighlights[url]['highlights'] = newHighlightArray;
-
-        chrome.storage.local.set({'allHighlights': allHighlights}, function() {});
-
-        //Atualizar log
-        chrome.runtime.sendMessage({msg: 'update_all'});
+        console.log(highlightId);
+        chrome.runtime.sendMessage({msg: 'delete_highlight', data: {highlightId: highlightId}});
 
         //Remover estilo do highlight, caso seja dessa página
-        if(url == currentURL)
-            _highlighter.removeHighlight(highlightId);
+        _highlighter.removeHighlight(highlightId);
     },
 };
 

@@ -2,6 +2,7 @@ var flag = 0;
 var highlightMode;
 var teste = 'asdasfsfa';
 var color = 'yellow';
+var currentRange = '';
 
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     switch(message.msg) { //Abrir / fechar o popup
@@ -14,6 +15,9 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
                 console.log('turn off front')
                 _highlighter.turnOffHighlightMode();
             }
+            break;
+        case 'wrap_highlight':
+            _highlighter.wrapSelection(currentRange, color, message.data.highlightId); 
             break;
     }
     return true;
@@ -90,10 +94,9 @@ var _highlighter = {
         if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY')) {
             const xpath = _xpath.createXPathRangeFromRange(range);
             const selectedText = range.toString();
-            const id = _utils.create_UUID();
-            _chromeStorage.saveHighlight(xpath, selectedText, id);
-    
-            this.wrapSelection(range, color, id); 
+            currentRange = range;
+            //const id = _utils.create_UUID();
+            _chromeStorage.saveHighlight(xpath, selectedText);
         }
     },
     
