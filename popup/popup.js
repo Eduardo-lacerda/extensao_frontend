@@ -16,8 +16,6 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
     switch(message.msg) { //Abrir / fechar o popup
         case 'toggle_popup':
             color = message.data.color;
-            console.log(message);
-            console.log(localStorage.getItem('jwt_token'))
             if(!message.data.popupOpened) {
                 if(!message.data.highlightMode) {
                     _highlighter.turnOnHighlightModeBack();
@@ -26,6 +24,8 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
                     popupFixed = true;
                 else
                     popupFixed = false;
+
+                //chrome.storage.local.remove('destaquei_jwt_token');
                 
                 chrome.storage.local.get('destaquei_jwt_token', function(data) {
                     console.log(data);

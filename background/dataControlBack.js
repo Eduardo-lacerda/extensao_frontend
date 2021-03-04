@@ -40,60 +40,52 @@ var _chromeStorage = {
 
     getHighlights: function (callBack) {
         var that = this;
-        chrome.storage.local.get('destaquei_jwt_token', function(data) {
-            console.log(data);
-            if(data['destaquei_jwt_token']) {
-                $.ajax({
-                    url : "https://visualiz.com.br/highlights",
-                    headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
-                    contentType: "application/json",
-                    dataType: "json",
-                    type : 'get',
-                    crossDomain : true,
-                    success: function(response) {
-                        console.log(response)
-                        if(!response.error){  
-                            var data = response.results;
-                            if(callBack == 'updateAll') {
-                                that.updateLog(data.highlights);
-                                that.updatePageHighlights(data.highlights);
-                                console.log('get highlights update all')
+        var userEmail = '';
+
+        chrome.storage.local.get('user_email', function(data) {
+            if(data['user_email']) {
+                userEmail = data['user_email'];
+
+                chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                    console.log(data);
+                    if(data['destaquei_jwt_token']) {
+                        $.ajax({
+                            url : "https://visualiz.com.br/highlights?email="+userEmail,
+                            headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
+                            contentType: "application/json",
+                            dataType: "json",
+                            type : 'get',
+                            crossDomain : true,
+                            success: function(response) {
+                                console.log(response)
+                                if(!response.error){  
+                                    var data = response.results;
+                                    if(callBack == 'updateAll') {
+                                        that.updateLog(data.highlights);
+                                        that.updatePageHighlights(data.highlights);
+                                        console.log('get highlights update all')
+                                    }
+                                    else if(callBack == 'updateLog')
+                                        that.updateLog(data.highlights);
+                                    else if(callBack == 'updatePageHighlights')
+                                        that.updatePageHighlights(data.highlights);
+                                }
+                            },
+                            error: function(response) {
+                                console.log(response)
+                                //Se code for 401, logar de novo
+                                if(response.error) {
+                                    if(response.errors)
+                                        that.sendToFront({msg: 'error_message', data: {msg: response.errors.msg, type: "get_highlights"}});
+                                    else
+                                        that.sendToFront({msg: 'error_message', data: {msg: "Erro no servidor", type: "get_highlights"}});
+                                }
                             }
-                            else if(callBack == 'updateLog')
-                                that.updateLog(data.highlights);
-                            else if(callBack == 'updatePageHighlights')
-                                that.updatePageHighlights(data.highlights);
-                        }
-                    },
-                    error: function(response) {
-                        console.log(response)
-                        //Se code for 401, logar de novo
-                        if(response.error) {
-                            if(response.errors)
-                                that.sendToFront({msg: 'error_message', data: {msg: response.errors.msg, type: "get_highlights"}});
-                            else
-                                that.sendToFront({msg: 'error_message', data: {msg: "Erro no servidor", type: "get_highlights"}});
-                        }
+                        });
                     }
                 });
             }
         });
-
-/*         chrome.storage.local.get('allHighlights', function(data) {
-            if(data['allHighlights']){
-                data = data['allHighlights'];
-                highlightData = data;
-                if(callBack == 'updateAll') {
-                    that.updateLog(data);
-                    that.updatePageHighlights(data);
-                    console.log('get highlights update all')
-                }
-                else if(callBack == 'updateLog')
-                    that.updateLog(data);
-                else if(callBack == 'updatePageHighlights')
-                    that.updatePageHighlights(data);
-            }
-        });  */
     },
 
     getRating: function (tabId) {
@@ -104,56 +96,40 @@ var _chromeStorage = {
 
     saveHighlight: function(highlight) {
         var that = this;
+        
+        chrome.storage.local.get('user_email', function (data) {
+            console.log(data);
+            if(data['user_email']) {
+                highlight['user_email'] = data['user_email'];
 
-        console.log(highlight);
-
-        chrome.storage.local.get('destaquei_jwt_token', function(data) {
-            $.ajax({
-                url : "https://visualiz.com.br/highlights",
-                headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
-                contentType: "application/json",
-                dataType: "json",
-                type : 'post',
-                crossDomain : true,
-                data : JSON.stringify(highlight),
-                success: function(response) {
-                    console.log(response)
-                    if(!response.error){  
-                        that.getHighlights('updateLog');
-                    }
-                },
-                error: function(response) {
-                    console.log(response)
-                    if(response.error) {
-                        if(response.errors)
-                            _popup.showMessage({msg: response.errors.msg, type: "save_highlight"}, 'error');
-                        else
-                            _popup.showMessage({msg: 'Erro no servidor', type: "save_highlight"}, 'error');
-                    }
-                }
-           });
+                chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                    $.ajax({
+                        url : "https://visualiz.com.br/highlights",
+                        headers: {"Authorization": "Bearer " + data['destaquei_jwt_token']},
+                        contentType: "application/json",
+                        dataType: "json",
+                        type : 'post',
+                        crossDomain : true,
+                        data : JSON.stringify(highlight),
+                        success: function(response) {
+                            console.log(response)
+                            if(!response.error){  
+                                that.getHighlights('updateLog');
+                            }
+                        },
+                        error: function(response) {
+                            console.log(response)
+                            if(response.error) {
+                                if(response.errors)
+                                    _popup.showMessage({msg: response.errors.msg, type: "save_highlight"}, 'error');
+                                else
+                                    _popup.showMessage({msg: 'Erro no servidor', type: "save_highlight"}, 'error');
+                            }
+                        }
+                   });
+                });
+            }
         });
-
-
-
-/*         chrome.storage.local.get('allHighlights', function(data) {
-            if(!data['allHighlights'])
-                data['allHighlights'] = {}; //Caso não existem highlights
-            var allHighlights = data['allHighlights'];
-
-            if(!allHighlights[currentURL]) //Caso a página atual já tenha sido salva
-                allHighlights[currentURL] = {};
-            var currentPage = allHighlights[currentURL];
-            
-            var highlight = {'text': text, 'xpath': xpath, 'color': color};
-            if(!currentPage['highlights']) //Caso não existam highlights na página atual
-                currentPage['highlights'] = [];
-            currentPage['highlights'].push(highlight);
-            const pageIcon = _utils.getPageIcons();
-            currentPage['icon'] = pageIcon[0];
-            allHighlights[currentURL] = currentPage;
-            chrome.storage.local.set({'allHighlights': allHighlights}, function() {});
-        }); */
     },
 
     updateLog: function(data) {
@@ -211,7 +187,6 @@ var _chromeStorage = {
 
     loginUser: function(data) {
         var that = this;
-        console.log(JSON.stringify(data))
         $.ajax({
             url : "https://visualiz.com.br/auth/login",
             contentType: "application/json",
@@ -220,17 +195,16 @@ var _chromeStorage = {
             crossDomain : true,
             data : JSON.stringify(data),
             success: function(response) {
-                console.log(response)
                 if(!response.error){  
                     chrome.storage.local.set({'destaquei_jwt_token': response.results.token}, function() {});
+                    chrome.storage.local.set({'user_email': response.results.user.email}, function() {});
                     that.sendToFront({msg: 'logged_in', data: {}});
                 }
             },
             error: function(response) {
-                console.log(response)
                 if(response.error) {
                     if(response.errors)
-                        that.sendToFront({msg: 'error_message', data: {msg: response.errors.msg, type: "register"}});
+                        that.sendToFront({msg: 'error_message', data: {msg: response.errors, type: "register"}});
                     else
                         that.sendToFront({msg: 'error_message', data: {msg: "Erro no servidor", type: "register"}});
                 }
