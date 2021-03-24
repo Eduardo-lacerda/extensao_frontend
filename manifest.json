@@ -27,7 +27,9 @@
     "popup/svg/great.html",
     "popup/success.html",
     "popup/error.html",
-    "popup/base.html"
+    "popup/base.html",
+    "popup/ratePopup.html",
+    "popup/aboutContent.html"
   ],
   "browser_action": {
   },

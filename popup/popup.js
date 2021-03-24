@@ -104,8 +104,6 @@ var _popup = {
         }
 
         _utils.waitFor(_ => document.getElementsByClassName('highlighter-popup-body').length > 0).then(_ => {
-            $('.highlighter-popup.log .highlighter-popup-body').html('');
-        
             popupOpened = true;
             clearTimeout(counter);
             chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
@@ -113,7 +111,7 @@ var _popup = {
             switch(screen) {
                 case 'default':
                     $.get(chrome.runtime.getURL('popup/popup.html'), function(data) {
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
                         $('.highlighter-popup-log').html('');
                         $('.highlighter-popup-log').append(logsHTML);
                     });
@@ -122,27 +120,37 @@ var _popup = {
                     console.log('initial screen')
                     $.get(chrome.runtime.getURL('popup/initialPopup.html'), function(data) {
                         console.log(data);
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
                     });
                     break;
                 case 'register':
                     $.get(chrome.runtime.getURL('popup/registerPopup.html'), function(data) {
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
                     });
                     break;
                 case 'login':
                     $.get(chrome.runtime.getURL('popup/loginPopup.html'), function(data) {
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
                     });
                     break;
                 case 'success':
                     $.get(chrome.runtime.getURL('popup/success.html'), function(data) {
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
                     });
                     break;
                 case 'error':
                     $.get(chrome.runtime.getURL('popup/error.html'), function(data) {
-                        $('.highlighter-popup.log .highlighter-popup-body').prepend(data);
+                        $('.highlighter-popup.log .highlighter-popup-body').html(data);
+                    });
+                    break;
+                case 'rate':
+                    $.get(chrome.runtime.getURL('popup/ratePopup.html'), function(data) {
+                        $('.highlighter-popup.controller').html(data);
+                    });
+                    break;
+                case 'about-content':
+                    $.get(chrome.runtime.getURL('popup/aboutContent.html'), function(data) {
+                        $('.highlighter-popup.controller').html(data);
                     });
                     break;
             }
@@ -157,6 +165,11 @@ var _popup = {
                 that.updateRating();
     
                 switch(screen) {
+                    case 'default':
+                        $('#highlight-search').on('input', function() {
+                            that.sendToBack('search_highlights_substring', {substring: $('#highlight-search').val()});
+                        });
+                        break;
                     case 'initial':
                         document.getElementById('register-cta').addEventListener('click', function(){
                             that.openPopup('register');
@@ -208,6 +221,20 @@ var _popup = {
                                 that.openPopup('initial');
                         });
                         break;
+                    case 'rate':
+                        _utils.waitFor(_ => document.getElementById('about-content') != null).then(_ => {
+                            document.getElementById('about-content').addEventListener('click', function(){
+                                that.openPopup('about-content');
+                            });
+                        });
+                        break;
+                    case 'about-content':
+                        _utils.waitFor(_ => document.getElementById('rate-btn') != null).then(_ => {
+                            document.getElementById('rate-btn').addEventListener('click', function(){
+                                that.openPopup('rate');
+                            });
+                        });
+                        break;
                 };
     
                 if(popupFixed)
@@ -239,7 +266,6 @@ var _popup = {
                 });
                 
                 $('.highlighter-popup .color-btn.green').on('click', function() {
-                    console.log('opa green');
                     _highlighter.changeHighlightColorBack('green');
                 });
 
@@ -255,6 +281,12 @@ var _popup = {
                         _chromeStorage.deleteHighlight(highlightId);
                     })
                 });
+
+                if(document.getElementById('rate-btn')) {
+                    document.getElementById('rate-btn').addEventListener('click', function(){
+                        that.openPopup('rate');
+                    });
+                }
                 _popup.startCounter(3000);
             });
         });
@@ -388,6 +420,10 @@ var _popup = {
             });
         }
     },
+
+    sendToBack: function(msg, data){
+        chrome.runtime.sendMessage({msg: msg, data: data});
+    }
 }
 
 

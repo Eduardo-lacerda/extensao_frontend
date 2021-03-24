@@ -21,10 +21,11 @@
 
 .highlighter-popup.log {
     top: 50px;
+    height: 281px;
 }
 
 .highlighter-popup.controller {
-    top: 335px;
+    top: 343px;
 }
 
 .highlighter-popup-header .colors-wrapper {
@@ -573,3 +574,42 @@
     border: none;
 }
 /*-------------------*/
+
+
+/*------------------RATE POPUP--------------------*/
+.breadcrumb-link {
+    cursor: pointer;
+    color: #888f96;
+}
+/*-------------------------------------------------*/
+
+/*--------------------MAIN SCREEN-----------------*/
+.search-bar#highlight-search {
+    width: 86%;
+    border: none;
+    background: #efefef;
+    height: 22px;
+    border-radius: 5px;
+    outline: none;
+    font-size: 12px;
+    color: #353535;
+    box-sizing: border-box;
+    padding-left: 24px;
+    padding-right: 5px;
+}
+
+.search-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+    margin-top: 6px;
+    position: relative;
+}
+
+.search-wrapper .search-icon {
+    position: absolute;
+    left: 23px;
+    font-size: 19px;
+    top: 2px;
+}
+/*------------------------------------------------*/
