@@ -69,20 +69,14 @@ var _chromeStorage = {
                         //Se code for 401, logar de novo
                         if (response.error) {
                             if (response.errors)
-                                that.sendToFront({ msg: 'error_message', data: { msg: response.errors.msg, type: "get_highlights" } });
+                                that.sendToFront('error_message', { msg: response.errors.msg, type: "get_highlights" });
                             else
-                                that.sendToFront({ msg: 'error_message', data: { msg: "Erro no servidor", type: "get_highlights" } });
+                                that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_highlights" });
                         }
                     }
                 });
             }
         });
-    },
-
-    getRating: function (tabId) {
-        console.log('update rating back')
-        ratingData = { 'page': 2.1, 'global': 3.8 };
-        chrome.tabs.sendMessage(tabId, { msg: 'update_rating', data: { ratingData: ratingData } });
     },
 
     saveHighlight: function (highlight) {
@@ -106,7 +100,7 @@ var _chromeStorage = {
                             console.log(response)
                             if (!response.error) {
                                 that.getHighlights('updateLog');
-                                that.sendToFront({ msg: 'wrap_highlight', data: { highlightId: response.results.id } })
+                                that.sendToFront('wrap_highlight', { highlightId: response.results.id })
                             }
                         },
                         error: function (response) {
@@ -140,13 +134,13 @@ var _chromeStorage = {
                 logsHTML = logsHTML + logHTML;
             });
 
-            this.sendToFront({ msg: 'update_log', data: { log: log, logsHTML: logsHTML }, highlightMode: highlightMode });
+            this.sendToFront('update_log', { log: log, logsHTML: logsHTML, highlightMode: highlightMode});
         }
     },
 
     updatePageHighlights: function (data) {
         console.log('updatepage highlights back')
-        this.sendToFront({ msg: 'update_page_highlights', data: data, highlightMode: highlightMode });
+        this.sendToFront('update_page_highlights', data);
     },
 
     registerUser: function (data) {
@@ -162,7 +156,7 @@ var _chromeStorage = {
             success: function (response) {
                 console.log(response)
                 if (!response.error) {
-                    that.sendToFront({ msg: 'success_message', data: { msg: "Registrado com sucesso!", type: "register" } });
+                    that.sendToFront(success_message, { msg: "Registrado com sucesso!", type: "register" });
                     that.verifyUser(response.results.verification);
                 }
             },
@@ -170,9 +164,9 @@ var _chromeStorage = {
                 console.log(response)
                 if (response.error) {
                     if (response.errors)
-                        that.sendToFront({ msg: 'error_message', data: { msg: response.errors.msg, type: "register" } });
+                        that.sendToFront('error_message', { msg: response.errors.msg, type: "register" });
                     else
-                        that.sendToFront({ msg: 'error_message', data: { msg: "Erro no servidor", type: "register" } });
+                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "register" });
                 }
             }
         })
@@ -191,16 +185,16 @@ var _chromeStorage = {
                 if (!response.error) {
                     chrome.storage.local.set({ 'destaquei_jwt_token': response.results.token }, function () { });
                     chrome.storage.local.set({ 'user_email': response.results.user.email }, function () { });
-                    that.sendToFront({ msg: 'logged_in', data: {} });
+                    that.sendToFront('logged_in', {});
                     that.updateLog('updateAll');
                 }
             },
             error: function (response) {
                 if (response.error) {
                     if (response.errors)
-                        that.sendToFront({ msg: 'error_message', data: { msg: response.errors, type: "register" } });
+                        that.sendToFront('error_message', { msg: response.errors, type: "register" });
                     else
-                        that.sendToFront({ msg: 'error_message', data: { msg: "Erro no servidor", type: "register" } });
+                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "register" });
                 }
             }
         })
@@ -251,12 +245,61 @@ var _chromeStorage = {
         });
     },
 
-    sendToFront: function (data) {
-        chrome.tabs.query({}, function (tabs) {
-            tabs.forEach((tab) => {
-                chrome.tabs.sendMessage(tab.id, data);
-            });
+    getRating: function (tabId, pageUrl, baseUrl) {
+        console.log('update rating back')
+        console.log(baseUrl)
+        var that = this;
+
+        chrome.storage.local.get('destaquei_jwt_token', function (data) {
+            if (data['destaquei_jwt_token']) {
+                var params = {"baseUrl": baseUrl, "pageUrl": pageUrl};
+                $.ajax({
+                    url: "https://visualiz.com.br/rate",
+                    headers: { "Authorization": "Bearer " + data['destaquei_jwt_token'] },
+                    contentType: "application/json",
+                    data: params,
+                    dataType: "json",
+                    type: 'get',
+                    crossDomain: true,
+                    success: function (response) {
+                        if (!response.error) {
+                            var data = response.results.rate;
+                            var newData = {};
+                            newData['pageRating'] = data.page_rate.toFixed(1);
+                            newData['baseRating'] = data.base_rate.toFixed(1);
+                            newData['comments'] = data.comments; 
+                            console.log(newData);
+                            that.sendToFront('update_rating', { ratingData: newData }, tabId);
+                        }
+                    },
+                    error: function (response) {
+                        console.log(response)
+                        //Se code for 401, logar de novo
+                        if (response.error) {
+                            if (response.errors)
+                                that.sendToFront('error_message', { msg: response.errors.msg, type: "get_rating" });
+                            else
+                                that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_rating" });
+                        }
+                    }
+                });
+            }
         });
+    },
+
+    sendToFront: function (msg, data, tabId) {
+        console.log('tabid: '+tabId)
+        var obj = {msg: msg, data: data};
+        if(tabId) {
+            chrome.tabs.sendMessage(tabId, obj);
+        }
+        else {
+            chrome.tabs.query({}, function (tabs) {
+                tabs.forEach((tab) => {
+                    chrome.tabs.sendMessage(tab.id, obj);
+                });
+            });
+        }
     }
 };
 

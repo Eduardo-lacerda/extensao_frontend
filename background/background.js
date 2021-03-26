@@ -4,6 +4,7 @@ var popupFixed = false;
 var color = 'yellow';
 var toggleOpened = false;
 var updatedPage = false;
+var baseUrlRegex = /^https?:\/\/[^\/]+/i;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -20,8 +21,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     updatedPage = true;
     if (changeInfo.status == 'complete') {
         console.log('update')
-        console.log('highlightMode: ' + highlightMode)
-        _chromeStorage.getRating(tabId);
+        console.log('highlightMode: ' + highlightMode);
+        _chromeStorage.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         if(popupOpened) {
             popupOpened = !popupOpened;
             if(toggleOpened)
@@ -37,7 +38,9 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 
 //Ao trocar de tab
 chrome.tabs.onActivated.addListener(function(activeInfo) {
-    _chromeStorage.getRating(activeInfo.tabId);
+    chrome.tabs.get(activeInfo.tabId, function(tab) {
+        _chromeStorage.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+    });
 });
 
 //Ao clicar no ícone

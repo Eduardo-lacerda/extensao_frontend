@@ -97,7 +97,7 @@
 .highlighter-popup-log {
     margin-top: 0px;
     overflow-y: scroll;
-    height: 189px;
+    height: 169px;
 }
 
 .highlighter-popup-log .log-wrapper {
@@ -108,7 +108,7 @@
     position: relative;
     box-sizing: border-box;
     width: 89%;
-    height: 72px;
+    height: 60px;
 /*     background: rgb(39, 39, 39);
     color: white; */
 }
@@ -116,19 +116,19 @@
 .highlighter-popup-log .log-text {
     margin: 0;
     margin-right: 10px;
-    line-height: 18px;
     vertical-align: baseline;
     display: inline-block;
     margin-right: 10px;
-    max-height: 52px;
     text-overflow: ellipsis;
     overflow: hidden;
     box-sizing: content-box;
     color: #6C757D;
-    font-size: 15px;
     padding-left: 4px;
     width: 174px;
     margin-top: 2px;
+    max-height: 43px;
+    line-height: 15px;
+    font-size: 13px;
 }
 
 .highlighter-popup-log .log-icons {
@@ -136,7 +136,7 @@
     display: inline-block;
     box-sizing: content-box;
     position: absolute;
-    top: 8px;
+    top: 4px;
 }
 
 .highlighter-popup .icon-wrapper {
@@ -154,7 +154,7 @@
 }
 
 .highlighter-popup-log .log-delete {
-    margin-top: 8px;
+    margin-top: 2px;
     font-size: 21px;
     margin-left: 2px;
     cursor: pointer;
@@ -601,8 +601,8 @@
 .search-wrapper {
     display: flex;
     justify-content: center;
-    margin-bottom: 6px;
-    margin-top: 6px;
+    margin-bottom: 7px;
+    margin-top: 7px;
     position: relative;
 }
 

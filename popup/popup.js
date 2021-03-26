@@ -66,6 +66,8 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             }
             break;
         case 'update_rating':
+            console.log('OPAAAAA')
+            console.log(message);
             ratingData = message.data.ratingData;
             _popup.updateRating();
             break;
@@ -397,21 +399,22 @@ var _popup = {
     updateRating: function() {
         if(popupOpened) {
             console.log('updateRatingFront')
+            console.log(ratingData)
             var pageBar = $('#page-rate .rate-bar-value');
             var globalBar = $('#global-rate .rate-bar-value');
-            const pageWidth = Math.round((ratingData.page / 5 * 100)) + '%'
-            const globalWidth = Math.round((ratingData.global / 5 * 100)) + '%'
-            pageBar.text((''+ratingData.page).replace('.', ','));
+            const pageWidth = Math.round((ratingData.pageRating / 5 * 100)) + '%'
+            const globalWidth = Math.round((ratingData.baseRating / 5 * 100)) + '%'
+            pageBar.text((''+ratingData.pageRating).replace('.', ','));
             pageBar.width(pageWidth);
-            globalBar.text((''+ratingData.global).replace('.', ','));
+            globalBar.text((''+ratingData.baseRating).replace('.', ','));
             globalBar.width(globalWidth);
 
             var classification = null;
-            if(ratingData.global <= (5 / 3))
+            if(ratingData.baseRating <= (5 / 3))
                 classification = 'bad';
-            if(ratingData.global >= (5 / 3) && ratingData.global <= (5 / 3 * 2))
+            if(ratingData.baseRating >= (5 / 3) && ratingData.baseRating <= (5 / 3 * 2))
                 classification = 'good';
-            if(ratingData.global >= (5 / 3 * 2))
+            if(ratingData.baseRating >= (5 / 3 * 2))
                 classification = 'great';
             console.log(classification);
             $.get(chrome.runtime.getURL('popup/svg/' + classification + '.html'), function(data) {
