@@ -13,3 +13,11 @@
 .highlighted.green {
     background: #cfff72;
 }
+
+.highlighted.others-color{
+    background: #cacaca;
+}
+
+.highlighted.others-color:hover,  .highlighted.others-color:hover *{
+    background: #ababab;
+}

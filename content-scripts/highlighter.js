@@ -17,7 +17,7 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             }
             break;
         case 'wrap_highlight':
-            _highlighter.wrapSelection(currentRange, color, message.data.highlightId); 
+            _highlighter.highlightLoadedText(message.data.xpath, color, message.data.highlightId); 
             break;
     }
     return true;
@@ -43,6 +43,7 @@ var _highlighter = {
                     const parentElementClassList = range.startContainer.parentElement.classList;
                     //Caso não seja dentro do popup
                     if(!parentElementClassList.contains('ipp')) {
+                            console.log('opa vai highlight')
                             _highlighter.highlightText();
                         } 
                 }
@@ -90,8 +91,10 @@ var _highlighter = {
 
         if(wasOpened)
             _popup.openPopup('default');
+        console.log(range);
 
-        if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY')) {
+        //if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY'))
+        if(range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY') {
             const xpath = _xpath.createXPathRangeFromRange(range);
             const selectedText = range.toString();
             currentRange = range;
@@ -110,8 +113,15 @@ var _highlighter = {
         _popup.closePopup();
 
         // id is for first span in list
-        var span = document.getElementById(id);
+        var spanList = $('[id='+ id +']');
+        var that = this;
+        Array.prototype.forEach.call(spanList, span => {
+            that.removeHighlightAux(span);
+        })
+        console.log('fim remove total')
+    },
 
+    removeHighlightAux: function(span) {
         if (!this.isHighlightSpan(span)) {
             return false;
         }
@@ -151,6 +161,8 @@ var _highlighter = {
                 _merge(nodeNew);
             }
 
+            if(span.parentNode == null)
+                return true;
             var nodeRemovedPreviousSibling = span.previousSibling;
             var nodeRemoved = span.parentNode.removeChild(span);
 
@@ -162,16 +174,22 @@ var _highlighter = {
             // point to next hl (undefined for last in list)
             span = nodeRemoved.nextSpan;
         }
-
+        console.log('fim span')
         return true;
     },
     
     wrapSelection: function(range, highlightColor, id) {
+        console.log(range)
         "use strict";
         // highlights are wrapped in one or more spans
+        //Checar se id já existe no documento
+        if(document.getElementById(id) != null)
+            return null;
         var span = document.createElement("SPAN");
         span.className = 'highlighted';
+        span.id = id;
         $(span).addClass(highlightColor);
+        
         
         // each node has a .nextElement property, for following the linked list
         var record = {
@@ -210,7 +228,6 @@ var _highlighter = {
         if (range.collapsed) {
             return;
         }
-    
         var startSide = range.startContainer, endSide = range.endContainer,
             ancestor = range.commonAncestorContainer, dirIsLeaf = true;
     
@@ -247,8 +264,12 @@ var _highlighter = {
         range.setEnd(range.startContainer, 0);
     
         var done = false, node = startSide;
-    
+        var nodesList = [];
         do {
+            if (node === endSide && (!endSide.hasChildNodes() || !dirIsLeaf)) {
+                done = true;
+            }
+            
             if (dirIsLeaf && node.nodeType === Node.TEXT_NODE &&
                     !(node.parentNode instanceof HTMLTableElement) &&
                     !(node.parentNode instanceof HTMLTableRowElement) &&
@@ -259,17 +280,30 @@ var _highlighter = {
     
                 if (!wrap || wrap !== record.lastSpan) {
                     wrap = createWrapper(node);
-                    node.parentNode.insertBefore(wrap, node);
+                    if(node.parentNode.nodeName == 'A') {
+                        node.parentNode.insertBefore(wrap, node);
+                        nodesList.push(node.parentNode);
+                    }
+                    else {
+                        nodesList.push(wrap);
+                    }
+                    
+                    if(done) {
+                        var totalWrapper = createWrapper('');
+                        nodesList.forEach(item => {
+                            totalWrapper.appendChild(item);
+                        });
+                        node.parentNode.insertBefore(totalWrapper, node);
+                    }
+                    else if(node.parentNode.nodeName != 'A') {
+                        node.parentNode.insertBefore(wrap, node);
+                    }
                 }
     
                 wrap.appendChild(node);
     
                 node = wrap.lastChild;
                 dirIsLeaf = false;
-            }
-    
-            if (node === endSide && (!endSide.hasChildNodes() || !dirIsLeaf)) {
-                done = true;
             }
     
             if (node instanceof HTMLScriptElement ||

@@ -84,7 +84,8 @@ var _xpath = {
         // map to range object
         var range = document.createRange();
         range.setStart(startContainer.singleNodeValue, xpathRange.startOffset);
-        range.setEnd(endContainer.singleNodeValue, endOffset);
+        if(endOffset <= endContainer.singleNodeValue.length)
+            range.setEnd(endContainer.singleNodeValue, endOffset);
         return range;
     }
 };

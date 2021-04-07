@@ -11,7 +11,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "css": ["css/highlight.css", "css/popup.css", "css/toggle.css"],
+      "css": ["css/highlight.css", "css/popup.css", "css/toggle.css", "css/carousel.css"],
       "js": ["utils/jquery.js", "content-scripts/xpath.js", "popup/popup.js", "utils/material.js",
         "content-scripts/dataControl.js", "content-scripts/highlighter.js", "utils/utils.js"]
     }
@@ -29,7 +29,11 @@
     "popup/error.html",
     "popup/base.html",
     "popup/ratePopup.html",
-    "popup/aboutContent.html"
+    "popup/aboutContent.html",
+    "popup/comment.html",
+    "popup/svg/arrowRight.html",
+    "popup/emptyRating.html",
+    "popup/hoverOthersHighlights.html"
   ],
   "browser_action": {
   },

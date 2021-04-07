@@ -2,6 +2,7 @@ const currentURL = window.location.href;
 var log = {};
 var highlights = {};
 var logsHTML = {};
+var othersHighlights = {};
 
 
 //Carregar os highlights já feitos na página
@@ -12,6 +13,9 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             break;
         case "update_page_highlights":
             _chromeStorage.stylizeHighlights(message.data);
+            break;
+        case "update_others_highlights":
+            _chromeStorage.stylizeOthersHighlights(message.data);
             break;
     }
     return true;
@@ -53,8 +57,23 @@ var _chromeStorage = {
         console.log(data);
         if(data != undefined) {
             data.forEach(highlight => {
-                _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
+                if(highlight.url == currentURL)
+                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
             });
+        }
+    },
+
+    stylizeOthersHighlights: function (highlightData) {
+        othersHighlights = highlightData;
+        console.log(othersHighlights)
+        if(highlightData != undefined) {
+            highlightData.forEach(highlight => {
+                highlight.color = 'others-color';
+                highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
+                _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id);
+            });
+            _popup.addOthersHighlightsListener();
+            console.log(othersHighlights)
         }
     },
 
@@ -63,7 +82,6 @@ var _chromeStorage = {
         var highlight = {'text': text, 'xpath': xpath, 'color': color};
         highlight['icon_url'] = _utils.getPageIcons()[0];
         highlight['url'] = currentURL;
-
         chrome.runtime.sendMessage({msg: 'save_highlight', data: highlight});
     },
 

@@ -22,7 +22,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if (changeInfo.status == 'complete') {
         console.log('update')
         console.log('highlightMode: ' + highlightMode);
-        _chromeStorage.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+        if(tab.url.match(baseUrlRegex))
+            _chromeStorage.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         if(popupOpened) {
             popupOpened = !popupOpened;
             if(toggleOpened)
@@ -31,7 +32,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         }
         chrome.storage.local.set({'highlightMode': false}, function() {});
         //Carregar os highlights já feitos na página e o log
-        _chromeStorage.getHighlights('updateAll');
+        _chromeStorage.getAllHighlights(tab.url);
         //--------------------------------------
     }
 });
@@ -39,7 +40,9 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 //Ao trocar de tab
 chrome.tabs.onActivated.addListener(function(activeInfo) {
     chrome.tabs.get(activeInfo.tabId, function(tab) {
-        _chromeStorage.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+        if(tab.url.match(baseUrlRegex))
+            _chromeStorage.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+        _chromeStorage.getAllHighlights(tab.url);
     });
 });
 

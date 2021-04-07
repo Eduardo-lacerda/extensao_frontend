@@ -10,7 +10,30 @@ var messageData = {
     'msg': '',
     'type': ''
 }
+ratingParsedData = {};
 var jwt_token;
+var currentCommentIndex = 1;
+var givingRatingData = {rate_number: 1, comment: ''};
+var dialog;
+var showingDialog = {};
+var highlightHoverCounter;
+var currentOtherHighlightHoverId;
+
+$.get(chrome.runtime.getURL('popup/hoverOthersHighlights.html'), function(data) {
+    $('body').append(data);
+    dialog = document.querySelector('dialog');
+    $('dialog').on({
+        mouseleave: function () {
+            _popup.startHighlightHoverCounter(2000);
+        },
+        mouseenter: function() {
+            clearTimeout(highlightHoverCounter);
+        }
+    });
+    $('#like-btn').on('click', function() {
+        _popup.likeHighlight();
+    });
+});
 
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     switch(message.msg) { //Abrir / fechar o popup
@@ -66,10 +89,7 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             }
             break;
         case 'update_rating':
-            console.log('OPAAAAA')
-            console.log(message);
             ratingData = message.data.ratingData;
-            _popup.updateRating();
             break;
         case 'success_message':
             _popup.showMessage(message.data, 'success');
@@ -161,10 +181,17 @@ var _popup = {
             var that = this;
     
             clearTimeout(toggleCounter);
+            $('.highlight-toggle-container').remove();
+
+            if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
+                $.get(chrome.runtime.getURL('popup/emptyRating.html'), function(data) {
+                    $('.highlighter-popup.controller .highlighter-popup-body').html('');
+                    $('.highlighter-popup.controller .highlighter-popup-body').append(data);
+                });
+            }
             
             _utils.waitFor(_ => document.getElementsByClassName('highlight-toggle-container').length > 0).then(_ => {
                 highlighter.changeHighlightColor(color);
-                that.updateRating();
     
                 switch(screen) {
                     case 'default':
@@ -225,8 +252,22 @@ var _popup = {
                         break;
                     case 'rate':
                         _utils.waitFor(_ => document.getElementById('about-content') != null).then(_ => {
+                            mdc.autoInit();
+                            sldr = new mdc.slider.MDCSlider(document.querySelector('.mdc-slider'));
+                            sldr.root.addEventListener('MDCSlider:change', (e)=> {
+                                givingRatingData.rate_number = e.detail.value;
+                            });
                             document.getElementById('about-content').addEventListener('click', function(){
                                 that.openPopup('about-content');
+                            });
+                            document.getElementById('cancel-btn').addEventListener('click', function(){
+                                that.openPopup('about-content');
+                            });
+                            document.getElementById('send-btn').addEventListener('click', function(){
+                                givingRatingData['page_url'] = window.location.href;
+                                givingRatingData['base_url'] = window.location.origin;
+                                givingRatingData.comment = document.getElementById('comment-input').value;
+                                that.sendToBack('send_rating', givingRatingData);
                             });
                         });
                         break;
@@ -238,7 +279,13 @@ var _popup = {
                         });
                         break;
                 };
-    
+
+                if(screen != 'rate') {
+                    _utils.waitFor(_ => document.getElementsByClassName('carousel-wrapper').length > 0).then(_ => {
+                        that.updateRating();
+                    });
+                }
+
                 if(popupFixed)
                     $('.header-btn#fix-btn').addClass('activated');
                     
@@ -273,6 +320,7 @@ var _popup = {
 
                 $('.logout-btn').on('click', function() {
                     chrome.storage.local.remove('destaquei_jwt_token');
+                    chrome.storage.local.remove('user_email');
                     _popup.openPopup('initial');
                 });
     
@@ -327,6 +375,19 @@ var _popup = {
         toggleCounter = setTimeout(function(){
             if (!document.hidden)
                 that.closeToggleBack();
+        }, time);
+    },
+
+    startHighlightHoverCounter: function(time) {
+        var that = this;
+        console.log('startHighlightHoverCounter')
+        highlightHoverCounter = setTimeout(function(){
+            if (!document.hidden) {
+                showingDialog = {};
+                dialog.close();
+                $('.like-btn').css('display', 'block');
+                $('.liked-btn').css('display', 'none');
+            }
         }, time);
     },
 
@@ -400,28 +461,127 @@ var _popup = {
         if(popupOpened) {
             console.log('updateRatingFront')
             console.log(ratingData)
-            var pageBar = $('#page-rate .rate-bar-value');
-            var globalBar = $('#global-rate .rate-bar-value');
-            const pageWidth = Math.round((ratingData.pageRating / 5 * 100)) + '%'
-            const globalWidth = Math.round((ratingData.baseRating / 5 * 100)) + '%'
-            pageBar.text((''+ratingData.pageRating).replace('.', ','));
-            pageBar.width(pageWidth);
-            globalBar.text((''+ratingData.baseRating).replace('.', ','));
-            globalBar.width(globalWidth);
-
-            var classification = null;
-            if(ratingData.baseRating <= (5 / 3))
-                classification = 'bad';
-            if(ratingData.baseRating >= (5 / 3) && ratingData.baseRating <= (5 / 3 * 2))
-                classification = 'good';
-            if(ratingData.baseRating >= (5 / 3 * 2))
-                classification = 'great';
-            console.log(classification);
-            $.get(chrome.runtime.getURL('popup/svg/' + classification + '.html'), function(data) {
-                $('.page-classification').html('');
-                $('.page-classification').append(data);
-            });
+            if(ratingData['pageRating']) {
+                var pageBar = $('#page-rate .rate-bar-value')[0];
+                var globalBar = $('#global-rate .rate-bar-value')[0];
+                const pageWidth = Math.round((ratingData.pageRating / 5 * 100)) + '%';
+                const globalWidth = Math.round((ratingData.baseRating / 5 * 100)) + '%';
+    
+                pageBar.innerText = (''+ratingData.pageRating).replace('.', ',');
+                pageBar.style.width = pageWidth;
+                globalBar.innerText = (''+ratingData.baseRating).replace('.', ',');
+                globalBar.style.width = globalWidth;
+    
+                var classification = null;
+                if(ratingData.baseRating <= (5 / 3))
+                    classification = 'bad';
+                if(ratingData.baseRating >= (5 / 3) && ratingData.baseRating <= (5 / 3 * 2))
+                    classification = 'good';
+                if(ratingData.baseRating >= (5 / 3 * 2))
+                    classification = 'great';
+                
+                $.get(chrome.runtime.getURL('popup/svg/' + classification + '.html'), function(data) {
+                    $('.page-classification').html('');
+                    $('.page-classification').append(data);
+                });
+    
+                //Comentários
+                $.get(chrome.runtime.getURL('popup/comment.html'), function(data) {
+                    var counter = 1;
+                    var length = ratingData.comments.length;
+    
+                    $('.carousel-wrapper').html('');
+                    document.getElementsByClassName('comment-counter')[0].textContent = '1 de ' + length + ' comentários';
+                    
+                    ratingData.comments.forEach(comment => {                
+                        var newComment = document.createElement('div');
+                        newComment.innerHTML = data;
+                        newComment.getElementsByClassName('carousel-slide')[0].id = 'comment_carousel_slide' + counter;
+    
+                        if(counter == 1) { //Se for o primeiro comentário
+                            //Vai pro último slide
+                            newComment.getElementsByClassName('carousel-prev')[0].href= '#comment_carousel_slide'+length;
+                            newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                            newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
+                            newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                        }
+                        else if(counter == length) { //Se for o último comentário
+                            newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
+                            newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                            //Vai pro primeiro slide
+                            newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide1';
+                            newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                        }
+                        else {
+                            newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
+                            newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
+                            newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                            newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                        }        
+    
+                        newComment.getElementsByClassName('comment-text')[0].textContent = '"'+comment.comment+'"';
+                        newComment.getElementsByClassName('comment-owner')[0].textContent = comment.user_name + ' - ' + comment.rate_number + '/5';
+                        
+                        counter++;
+    
+                        $('.carousel-wrapper').append(newComment.innerHTML);
+                    });
+    
+                    $('.carousel-next').on('click', function() {
+                        if(currentCommentIndex == ratingData.comments.length)
+                            currentCommentIndex = 1;
+                        else
+                            currentCommentIndex++;
+                        document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
+                    });
+    
+                    $('.carousel-prev').on('click', function() {
+                        if(currentCommentIndex == 1)
+                            currentCommentIndex = ratingData.comments.length;
+                        else
+                            currentCommentIndex--;
+                        document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
+                    });
+    
+                    document.querySelectorAll('a[href^="#"]').forEach(anchor => { //Corrigir bug
+                        anchor.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                                behavior: 'smooth'
+                            });
+                        });
+                    });
+                });
+            }
         }
+    },
+
+    addOthersHighlightsListener: function() {
+        $('span.highlighted.others-color.others-highlight').on({
+            mouseover: function (e) {
+                const id = $(this)[0].id;
+                if(!(''+id in showingDialog)) {
+                    showingDialog[id] = false;
+                }
+                if(showingDialog[id] == false) {
+                    currentOtherHighlightHoverId = id;
+                    dialog.show();
+                    $("dialog").css("transform","translate3d("+e.pageX+"px,"+e.pageY+"px,0px)");
+                    showingDialog = {};
+                    showingDialog[id] = true;
+                }
+            }
+        });
+    },
+
+    likeHighlight: function() {
+        var id = currentOtherHighlightHoverId;
+        var currentHighlight = othersHighlights.find(highlight => highlight._id == id);
+        _highlighter.removeHighlight(id);
+        _chromeStorage.saveHighlight(currentHighlight.xpath, currentHighlight.text);
+        this.startHighlightHoverCounter(2000);
+        $('.like-btn').css('display', 'none');
+        $('.liked-btn').css('display', 'block');
     },
 
     sendToBack: function(msg, data){

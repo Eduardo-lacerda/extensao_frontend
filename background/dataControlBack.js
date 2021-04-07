@@ -2,6 +2,8 @@ var currentURL = window.location.href;
 var log = {};
 var highlightData = {};
 var ratingData = {};
+var othersHighlightsData = {};
+var userEmail;
 
 
 //Carregar os highlights já feitos na página
@@ -26,12 +28,19 @@ chrome.extension.onMessage.addListener(function (message, messageSender, sendRes
         case "search_highlights_substring":
             _chromeStorage.getHighlights('updateLog', message.data.substring);
             break;
+        case "send_rating":
+            _chromeStorage.sendRating(message.data);
+            break;
     }
     return true;
 });
 //--------------------------------------
 
 var _chromeStorage = {
+    getAllHighlights: function(tabId) {
+        this.getOthersHighlights(tabId);
+    },
+
     getHighlights: function (callBack, substring) {
         var that = this;
 
@@ -53,6 +62,7 @@ var _chromeStorage = {
                         console.log(response)
                         if (!response.error) {
                             var data = response.results;
+                            highlightData = response.results.highlights;
                             if (callBack == 'updateAll') {
                                 that.updateLog(data.highlights);
                                 that.updatePageHighlights(data.highlights);
@@ -62,6 +72,11 @@ var _chromeStorage = {
                                 that.updateLog(data.highlights);
                             else if (callBack == 'updatePageHighlights')
                                 that.updatePageHighlights(data.highlights);
+                            else if (callBack == 'updateAllAndOthers') {
+                                that.updateLog(data.highlights);
+                                that.updatePageHighlights(data.highlights);
+                                that.updateOthersHighlights();
+                            }
                         }
                     },
                     error: function (response) {
@@ -77,6 +92,59 @@ var _chromeStorage = {
                 });
             }
         });
+    },
+
+    getOthersHighlights: function (url) {
+        var that = this;
+
+        var params = {url: url};
+        $.ajax({
+            url: "https://visualiz.com.br/highlights/others",
+            contentType: "application/json",
+            data: params,
+            dataType: "json",
+            type: 'get',
+            crossDomain: true,
+            success: function (response) {
+                console.log(response)
+                if (!response.error) {
+                    var responseData = response.results.highlights;
+                    chrome.storage.local.get('user_email', function (data) {
+                        if (data['user_email']) {
+                            userEmail = data['user_email'];
+                            othersHighlightsData = responseData;
+                            that.getHighlights('updateAllAndOthers');
+                        }
+                        else {
+                            that.sendToFront('update_others_highlights', responseData);
+                        }
+                    });
+                }
+            },
+            error: function (response) {
+                console.log(response)
+                //Se code for 401, logar de novo
+                if (response.error) {
+                    if (response.errors)
+                        that.sendToFront('error_message', { msg: response.errors.msg, type: "get_others_highlights" });
+                    else
+                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_others_highlights" });
+                }
+            }
+        });
+    },
+    
+    updateOthersHighlights: function() {
+        othersHighlightsData = othersHighlightsData.filter(item => {
+            var condition = true;
+            if(item.user_email == userEmail)
+                condition = false;
+            var sameHighlight = highlightData.find(highlight => highlight.text == item.text);
+            if(sameHighlight != null) //Existir o mesmo texto nos highlights alheios e próprios
+                condition = false;
+            return condition;
+        })
+        this.sendToFront('update_others_highlights', othersHighlightsData);
     },
 
     saveHighlight: function (highlight) {
@@ -100,7 +168,7 @@ var _chromeStorage = {
                             console.log(response)
                             if (!response.error) {
                                 that.getHighlights('updateLog');
-                                that.sendToFront('wrap_highlight', { highlightId: response.results.id })
+                                that.sendToFront('wrap_highlight', { highlightId: response.results.id, xpath: response.results.xpath })
                             }
                         },
                         error: function (response) {
@@ -115,6 +183,35 @@ var _chromeStorage = {
                     });
                 });
             }
+        });
+    },
+
+    sendRating: function (ratingData) {
+        var that = this;
+
+        chrome.storage.local.get('destaquei_jwt_token', function (data) {
+            $.ajax({
+                url: "https://visualiz.com.br/rate",
+                headers: { "Authorization": "Bearer " + data['destaquei_jwt_token'] },
+                contentType: "application/json",
+                dataType: "json",
+                type: 'post',
+                crossDomain: true,
+                data: JSON.stringify(ratingData),
+                success: function (response) {
+                    console.log(response)
+                    that.sendToFront('success_message', { msg: "Avaliação enviada com sucesso!", type: "save_rating" });
+                },
+                error: function (response) {
+                    console.log(response)
+                    if (response.error) {
+                        if (response.errors)
+                        that.sendToFront('error_message', { msg: response.errors.msg, type: "save_rating" });
+                    else
+                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "save_rating" });
+                    }
+                }
+            });
         });
     },
 
@@ -156,7 +253,7 @@ var _chromeStorage = {
             success: function (response) {
                 console.log(response)
                 if (!response.error) {
-                    that.sendToFront(success_message, { msg: "Registrado com sucesso!", type: "register" });
+                    that.sendToFront('success_message', { msg: "Registrado com sucesso!", type: "register" });
                     that.verifyUser(response.results.verification);
                 }
             },
@@ -186,7 +283,7 @@ var _chromeStorage = {
                     chrome.storage.local.set({ 'destaquei_jwt_token': response.results.token }, function () { });
                     chrome.storage.local.set({ 'user_email': response.results.user.email }, function () { });
                     that.sendToFront('logged_in', {});
-                    that.updateLog('updateAll');
+                    that.getHighlights('updateAll');
                 }
             },
             error: function (response) {
@@ -249,40 +346,36 @@ var _chromeStorage = {
         console.log('update rating back')
         console.log(baseUrl)
         var that = this;
-
-        chrome.storage.local.get('destaquei_jwt_token', function (data) {
-            if (data['destaquei_jwt_token']) {
-                var params = {"baseUrl": baseUrl, "pageUrl": pageUrl};
-                $.ajax({
-                    url: "https://visualiz.com.br/rate",
-                    headers: { "Authorization": "Bearer " + data['destaquei_jwt_token'] },
-                    contentType: "application/json",
-                    data: params,
-                    dataType: "json",
-                    type: 'get',
-                    crossDomain: true,
-                    success: function (response) {
-                        if (!response.error) {
-                            var data = response.results.rate;
-                            var newData = {};
-                            newData['pageRating'] = data.page_rate.toFixed(1);
-                            newData['baseRating'] = data.base_rate.toFixed(1);
-                            newData['comments'] = data.comments; 
-                            console.log(newData);
-                            that.sendToFront('update_rating', { ratingData: newData }, tabId);
-                        }
-                    },
-                    error: function (response) {
-                        console.log(response)
-                        //Se code for 401, logar de novo
-                        if (response.error) {
-                            if (response.errors)
-                                that.sendToFront('error_message', { msg: response.errors.msg, type: "get_rating" });
-                            else
-                                that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_rating" });
-                        }
-                    }
-                });
+        
+        var params = {"baseUrl": baseUrl, "pageUrl": pageUrl};
+        console.log(params)
+        $.ajax({
+            url: "https://visualiz.com.br/rate",
+            contentType: "application/json",
+            data: params,
+            dataType: "json",
+            type: 'get',
+            crossDomain: true,
+            success: function (response) {
+                if (!response.error) {
+                    var data = response.results.rate;
+                    var newData = {};
+                    newData['pageRating'] = data.page_rate.toFixed(1);
+                    newData['baseRating'] = data.base_rate.toFixed(1);
+                    newData['comments'] = data.comments; 
+                    console.log(newData);
+                    that.sendToFront('update_rating', { ratingData: newData }, tabId);
+                }
+            },
+            error: function (response) {
+                console.log(response)
+                //Se code for 401, logar de novo
+                if (response.error) {
+                    if (response.errors)
+                        that.sendToFront('error_message', { msg: response.errors.msg, type: "get_rating" });
+                    else
+                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_rating" });
+                }
             }
         });
     },
