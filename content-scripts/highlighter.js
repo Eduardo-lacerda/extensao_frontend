@@ -8,11 +8,9 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
     switch(message.msg) { //Abrir / fechar o popup
         case 'toggle_highlight_mode':
             if(message.data.highlightMode) {
-                console.log('turn on front')
                 _highlighter.turnOnHighlightMode();
             }
             else {
-                console.log('turn off front')
                 _highlighter.turnOffHighlightMode();
             }
             break;
@@ -43,7 +41,6 @@ var _highlighter = {
                     const parentElementClassList = range.startContainer.parentElement.classList;
                     //Caso não seja dentro do popup
                     if(!parentElementClassList.contains('ipp')) {
-                            console.log('opa vai highlight')
                             _highlighter.highlightText();
                         } 
                 }
@@ -52,18 +49,15 @@ var _highlighter = {
     },
 
     turnOnHighlightModeBack: function() {
-        console.log('turnOnHighlightMode')
         chrome.runtime.sendMessage({msg: 'turn_on_highlight_mode'});
     },
 
     turnOffHighlightModeBack: function() {
-        console.log('turnOffHighlightMode')
         chrome.runtime.sendMessage({msg: 'turn_off_highlight_mode'});
     },
 
     turnOnHighlightMode: function() {
         if(!highlightMode) {
-            console.log('turnOnHighlightMode Front')
             if(document.getElementById('highlight-toggle') != null)
                 document.getElementById('highlight-toggle').checked = true;
             highlightMode = true;
@@ -72,7 +66,6 @@ var _highlighter = {
 
     turnOffHighlightMode: function() {
         if(highlightMode) {
-            console.log('turnOffHighlightMode Front')
             if(document.getElementById('highlight-toggle') != null)
                 document.getElementById('highlight-toggle').checked = false;
             highlightMode = false;
@@ -91,7 +84,6 @@ var _highlighter = {
 
         if(wasOpened)
             _popup.openPopup('default');
-        console.log(range);
 
         //if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY'))
         if(range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY') {
@@ -109,19 +101,25 @@ var _highlighter = {
             this.wrapSelection(range, highlightColor, id);
     },
 
-    removeHighlight: function (id) {
-        _popup.closePopup();
+    removeHighlight: function (id, closePopup) {
+        if(closePopup) {
+            var popupWasOpened = false;
+            if(popupOpened) {
+                popupWasOpened = true;
+                _popup.closePopup();
+            }
+        }
+
 
         // id is for first span in list
         var spanList = $('[id='+ id +']');
         var that = this;
         Array.prototype.forEach.call(spanList, span => {
-            that.removeHighlightAux(span);
+            that.removeHighlightAux(span, closePopup, popupWasOpened);
         })
-        console.log('fim remove total')
     },
 
-    removeHighlightAux: function(span) {
+    removeHighlightAux: function(span, closePopup, popupWasOpened) {
         if (!this.isHighlightSpan(span)) {
             return false;
         }
@@ -149,7 +147,8 @@ var _highlighter = {
             }
         }
 
-        _popup.openPopup('default');
+        if(closePopup && popupWasOpened)
+            _popup.openPopup('default');
 
         // iterate whilst all tests for being a highlight span node are passed
         while (this.isHighlightSpan(span)) {
@@ -174,12 +173,10 @@ var _highlighter = {
             // point to next hl (undefined for last in list)
             span = nodeRemoved.nextSpan;
         }
-        console.log('fim span')
         return true;
     },
     
     wrapSelection: function(range, highlightColor, id) {
-        console.log(range)
         "use strict";
         // highlights are wrapped in one or more spans
         //Checar se id já existe no documento
@@ -280,7 +277,11 @@ var _highlighter = {
     
                 if (!wrap || wrap !== record.lastSpan) {
                     wrap = createWrapper(node);
-                    if(node.parentNode.nodeName == 'A') {
+                    //no total wrapping
+                    node.parentNode.insertBefore(wrap, node);
+                    
+                    //total wrapping
+/*                     if(node.parentNode.nodeName == 'A') {
                         node.parentNode.insertBefore(wrap, node);
                         nodesList.push(node.parentNode);
                     }
@@ -297,7 +298,7 @@ var _highlighter = {
                     }
                     else if(node.parentNode.nodeName != 'A') {
                         node.parentNode.insertBefore(wrap, node);
-                    }
+                    } */
                 }
     
                 wrap.appendChild(node);

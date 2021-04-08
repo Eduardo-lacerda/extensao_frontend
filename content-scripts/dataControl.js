@@ -17,6 +17,12 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case "update_others_highlights":
             _chromeStorage.stylizeOthersHighlights(message.data);
             break;
+        case "remove_all_highlights_styles":
+            _chromeStorage.removeAllHighlightsStyles('others', 'loadAllHighlightsAndOthers');
+            break;
+        case "update_others_highlights_then_mine":
+            _chromeStorage.stylizeAllHighlights(message.data);
+            break;
     }
     return true;
 });
@@ -36,7 +42,6 @@ var _chromeStorage = {
     } */
 
     updateLog: function (data) {
-        console.log('updateLog');
         log = data.log;
         logsHTML = data.logsHTML;
         $('.highlighter-popup-log').html('');
@@ -52,20 +57,60 @@ var _chromeStorage = {
         }, 20);
     },
 
+    removeAllHighlightsStyles: function(whatToRemove, callback) {
+        if(whatToRemove == 'all') {
+            highlights.forEach(item => {
+                _highlighter.removeHighlight(item._id, false);
+              });  
+              othersHighlights.forEach(item => {
+                _highlighter.removeHighlight(item._id, false);
+              });  
+        }
+        else if(whatToRemove == 'others') {
+            console.log('removendo estilo others')
+            othersHighlights.forEach(item => {
+                _highlighter.removeHighlight(item._id, false);
+              });  
+        }
+
+        if(callback) {
+            if(callback == 'loadAllHighlightsAndOthers') {
+                chrome.runtime.sendMessage({msg: 'get_all_highlights_and_others', data: {url: currentURL}});
+            }
+            if(callback == 'loadOthers') {
+                chrome.runtime.sendMessage({msg: 'load_others_highlights', data: {url: currentURL}});
+            }
+        }
+    },
+
     stylizeHighlights: function (data) {
-        console.log('stylize');
-        console.log(data);
+        highlights = data;
+        console.log(highlights);
         if(data != undefined) {
             data.forEach(highlight => {
                 if(highlight.url == currentURL)
                     _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
             });
+            _popup.addHoverListeners();
         }
+        console.log('fim mine')
+    },
+
+    stylizeAllHighlights: function(data) {
+/*         var wasOpened = false;
+        if(popupOpened) {
+            _popup.closePopup();
+            wasOpened = true;
+        } */
+        this.stylizeHighlights(data.highlightData);
+        this.stylizeOthersHighlights(data.othersHighlightsData);
+/*         if(wasOpened)
+            _popup.openPopup('default'); */
     },
 
     stylizeOthersHighlights: function (highlightData) {
         othersHighlights = highlightData;
-        console.log(othersHighlights)
+        console.log(highlightData);
         if(highlightData != undefined) {
             highlightData.forEach(highlight => {
                 highlight.color = 'others-color';
@@ -73,12 +118,12 @@ var _chromeStorage = {
                 _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id);
             });
             _popup.addOthersHighlightsListener();
-            console.log(othersHighlights)
+            _popup.addHoverListeners();
         }
+        console.log('fim others')
     },
 
     saveHighlight: function(xpath, text) {
-        console.log('saveHighlight');
         var highlight = {'text': text, 'xpath': xpath, 'color': color};
         highlight['icon_url'] = _utils.getPageIcons()[0];
         highlight['url'] = currentURL;
@@ -86,12 +131,10 @@ var _chromeStorage = {
     },
 
     deleteHighlight: function(highlightId) {
-        console.log('deleteHighlight')
-        console.log(highlightId);
         chrome.runtime.sendMessage({msg: 'delete_highlight', data: {highlightId: highlightId}});
 
         //Remover estilo do highlight, caso seja dessa página
-        _highlighter.removeHighlight(highlightId);
+        _highlighter.removeHighlight(highlightId, true);
     },
 };
 

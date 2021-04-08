@@ -4,7 +4,7 @@ var highlightData = {};
 var ratingData = {};
 var othersHighlightsData = {};
 var userEmail;
-
+var jwtToken;
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function (message, messageSender, sendResponse) {
@@ -13,7 +13,6 @@ chrome.extension.onMessage.addListener(function (message, messageSender, sendRes
             _chromeStorage.getHighlights();
             break;
         case "register_user":
-            console.log('registerUser');
             _chromeStorage.registerUser(message.data);
             break;
         case "login_user":
@@ -23,7 +22,7 @@ chrome.extension.onMessage.addListener(function (message, messageSender, sendRes
             _chromeStorage.saveHighlight(message.data);
             break;
         case "delete_highlight":
-            _chromeStorage.removeHighlight(message.data.highlightId);
+            _chromeStorage.removeHighlight(message.data.highlightId, true);
             break;
         case "search_highlights_substring":
             _chromeStorage.getHighlights('updateLog', message.data.substring);
@@ -31,14 +30,23 @@ chrome.extension.onMessage.addListener(function (message, messageSender, sendRes
         case "send_rating":
             _chromeStorage.sendRating(message.data);
             break;
+        case "get_all_highlights_and_others":
+            _chromeStorage.getAllHighlights(message.data.url);
+            break;
+        case "load_others_highlights":
+            _chromeStorage.getOthersHighlights(message.data.url);
+            break;
     }
     return true;
 });
 //--------------------------------------
 
 var _chromeStorage = {
-    getAllHighlights: function(tabId) {
-        this.getOthersHighlights(tabId);
+    getAllHighlights: function(tabUrl) {
+        if(othersMode)
+            this.getOthersHighlights(tabUrl);
+        else 
+            this.getHighlights('updateAll');
     },
 
     getHighlights: function (callBack, substring) {
@@ -59,28 +67,27 @@ var _chromeStorage = {
                     type: 'get',
                     crossDomain: true,
                     success: function (response) {
-                        console.log(response)
+                        
                         if (!response.error) {
                             var data = response.results;
                             highlightData = response.results.highlights;
                             if (callBack == 'updateAll') {
                                 that.updateLog(data.highlights);
                                 that.updatePageHighlights(data.highlights);
-                                console.log('get highlights update all')
                             }
                             else if (callBack == 'updateLog')
                                 that.updateLog(data.highlights);
                             else if (callBack == 'updatePageHighlights')
                                 that.updatePageHighlights(data.highlights);
                             else if (callBack == 'updateAllAndOthers') {
+                                console.log('get highlights update all and others')
                                 that.updateLog(data.highlights);
-                                that.updatePageHighlights(data.highlights);
-                                that.updateOthersHighlights();
+                                that.updateOthersHighlightsThenMine();
                             }
                         }
                     },
                     error: function (response) {
-                        console.log(response)
+                        
                         //Se code for 401, logar de novo
                         if (response.error) {
                             if (response.errors)
@@ -96,62 +103,64 @@ var _chromeStorage = {
 
     getOthersHighlights: function (url) {
         var that = this;
-
-        var params = {url: url};
-        $.ajax({
-            url: "https://visualiz.com.br/highlights/others",
-            contentType: "application/json",
-            data: params,
-            dataType: "json",
-            type: 'get',
-            crossDomain: true,
-            success: function (response) {
-                console.log(response)
-                if (!response.error) {
-                    var responseData = response.results.highlights;
-                    chrome.storage.local.get('user_email', function (data) {
-                        if (data['user_email']) {
-                            userEmail = data['user_email'];
-                            othersHighlightsData = responseData;
+        chrome.storage.local.get('destaquei_jwt_token', function (data) {
+            var serviceUrl = '';
+            var headers = {};
+            if (data['destaquei_jwt_token']) {
+                jwtToken = data['destaquei_jwt_token'];
+                serviceUrl = "https://visualiz.com.br/highlights/others/authenticated";
+                headers = { "Authorization": "Bearer " + data['destaquei_jwt_token'] };
+            }
+            else {
+                serviceUrl = "https://visualiz.com.br/highlights/others";
+            }
+            var params = {url: url};
+            $.ajax({
+                url: serviceUrl,
+                contentType: "application/json",
+                data: params,
+                headers: headers,
+                dataType: "json",
+                type: 'get',
+                crossDomain: true,
+                success: function (response) {
+                    if (!response.error) {
+                        var responseData = response.results.highlights;
+                        othersHighlightsData = responseData;
+                        if (data['destaquei_jwt_token']) {
                             that.getHighlights('updateAllAndOthers');
                         }
                         else {
-                            that.sendToFront('update_others_highlights', responseData);
+                            that.updateOthersHighlights();
                         }
-                    });
+                    }
+                },
+                error: function (response) {
+                    
+                    //Se code for 401, logar de novo
+                    if (response.error) {
+                        if (response.errors)
+                            that.sendToFront('error_message', { msg: response.errors.msg, type: "get_others_highlights" });
+                        else
+                            that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_others_highlights" });
+                    }
                 }
-            },
-            error: function (response) {
-                console.log(response)
-                //Se code for 401, logar de novo
-                if (response.error) {
-                    if (response.errors)
-                        that.sendToFront('error_message', { msg: response.errors.msg, type: "get_others_highlights" });
-                    else
-                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_others_highlights" });
-                }
-            }
+            });
         });
     },
     
     updateOthersHighlights: function() {
-        othersHighlightsData = othersHighlightsData.filter(item => {
-            var condition = true;
-            if(item.user_email == userEmail)
-                condition = false;
-            var sameHighlight = highlightData.find(highlight => highlight.text == item.text);
-            if(sameHighlight != null) //Existir o mesmo texto nos highlights alheios e próprios
-                condition = false;
-            return condition;
-        })
         this.sendToFront('update_others_highlights', othersHighlightsData);
+    },
+
+    updateOthersHighlightsThenMine: function() {
+        this.sendToFront('update_others_highlights_then_mine', {othersHighlightsData: othersHighlightsData, highlightData: highlightData});
     },
 
     saveHighlight: function (highlight) {
         var that = this;
 
         chrome.storage.local.get('user_email', function (data) {
-            console.log(data);
             if (data['user_email']) {
                 highlight['user_email'] = data['user_email'];
 
@@ -165,14 +174,14 @@ var _chromeStorage = {
                         crossDomain: true,
                         data: JSON.stringify(highlight),
                         success: function (response) {
-                            console.log(response)
+                            
                             if (!response.error) {
                                 that.getHighlights('updateLog');
                                 that.sendToFront('wrap_highlight', { highlightId: response.results.id, xpath: response.results.xpath })
                             }
                         },
                         error: function (response) {
-                            console.log(response)
+                            
                             if (response.error) {
                                 if (response.errors)
                                     _popup.showMessage({ msg: response.errors.msg, type: "save_highlight" }, 'error');
@@ -199,11 +208,11 @@ var _chromeStorage = {
                 crossDomain: true,
                 data: JSON.stringify(ratingData),
                 success: function (response) {
-                    console.log(response)
+                    
                     that.sendToFront('success_message', { msg: "Avaliação enviada com sucesso!", type: "save_rating" });
                 },
                 error: function (response) {
-                    console.log(response)
+                    
                     if (response.error) {
                         if (response.errors)
                         that.sendToFront('error_message', { msg: response.errors.msg, type: "save_rating" });
@@ -236,13 +245,11 @@ var _chromeStorage = {
     },
 
     updatePageHighlights: function (data) {
-        console.log('updatepage highlights back')
         this.sendToFront('update_page_highlights', data);
     },
 
     registerUser: function (data) {
         var that = this;
-        console.log(JSON.stringify(data))
         $.ajax({
             url: "https://visualiz.com.br/auth/register",
             contentType: "application/json",
@@ -251,14 +258,14 @@ var _chromeStorage = {
             crossDomain: true,
             data: JSON.stringify(data),
             success: function (response) {
-                console.log(response)
+                
                 if (!response.error) {
                     that.sendToFront('success_message', { msg: "Registrado com sucesso!", type: "register" });
                     that.verifyUser(response.results.verification);
                 }
             },
             error: function (response) {
-                console.log(response)
+                
                 if (response.error) {
                     if (response.errors)
                         that.sendToFront('error_message', { msg: response.errors.msg, type: "register" });
@@ -271,6 +278,8 @@ var _chromeStorage = {
 
     loginUser: function (data) {
         var that = this;
+        var url = data.url;
+        delete data.url;
         $.ajax({
             url: "https://visualiz.com.br/auth/login",
             contentType: "application/json",
@@ -280,10 +289,11 @@ var _chromeStorage = {
             data: JSON.stringify(data),
             success: function (response) {
                 if (!response.error) {
+                    jwtToken = response.results.token;
                     chrome.storage.local.set({ 'destaquei_jwt_token': response.results.token }, function () { });
                     chrome.storage.local.set({ 'user_email': response.results.user.email }, function () { });
                     that.sendToFront('logged_in', {});
-                    that.getHighlights('updateAll');
+                    that.sendToFront('remove_all_highlights_styles', {});
                 }
             },
             error: function (response) {
@@ -306,7 +316,7 @@ var _chromeStorage = {
             type: 'get',
             crossDomain: true,
             success: function (response) {
-                console.log(response);
+                ;
             }
         })
     },
@@ -323,13 +333,13 @@ var _chromeStorage = {
                     type: 'delete',
                     crossDomain: true,
                     success: function (response) {
-                        console.log(response)
+                        
                         if (!response.error) {
                             that.getHighlights('updateAll');
                         }
                     },
                     error: function (response) {
-                        console.log(response)
+                        
                         if (response.error) {
                             if (response.errors)
                                 _popup.showMessage({ msg: response.errors, type: "delete_highlight" }, 'error');
@@ -343,8 +353,6 @@ var _chromeStorage = {
     },
 
     getRating: function (tabId, pageUrl, baseUrl) {
-        console.log('update rating back')
-        console.log(baseUrl)
         var that = this;
         
         var params = {"baseUrl": baseUrl, "pageUrl": pageUrl};
@@ -363,12 +371,11 @@ var _chromeStorage = {
                     newData['pageRating'] = data.page_rate.toFixed(1);
                     newData['baseRating'] = data.base_rate.toFixed(1);
                     newData['comments'] = data.comments; 
-                    console.log(newData);
                     that.sendToFront('update_rating', { ratingData: newData }, tabId);
                 }
             },
             error: function (response) {
-                console.log(response)
+                
                 //Se code for 401, logar de novo
                 if (response.error) {
                     if (response.errors)
@@ -381,7 +388,7 @@ var _chromeStorage = {
     },
 
     sendToFront: function (msg, data, tabId) {
-        console.log('tabid: '+tabId)
+
         var obj = {msg: msg, data: data};
         if(tabId) {
             chrome.tabs.sendMessage(tabId, obj);
@@ -453,7 +460,6 @@ const isUniqueMatch = (hayStack, start, end = '') => {
         return false;
     } catch (err) {
         // This can happen when the regular expression can't be created.
-        console.error(err.name, err.message);
         return null;
     }
 };
@@ -623,7 +629,6 @@ const createURL = async (tabURL) => {
     try {
         pageResponse = await sendMessageToPage('get-text');
     } catch (err) {
-        console.error(err.name, err.message);
         return false;
     }
     const {

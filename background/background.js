@@ -1,6 +1,7 @@
 var highlightMode = false;
 var popupOpened = false;
 var popupFixed = false;
+var othersMode = true;
 var color = 'yellow';
 var toggleOpened = false;
 var updatedPage = false;
@@ -20,8 +21,6 @@ chrome.runtime.onInstalled.addListener(function() {
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     updatedPage = true;
     if (changeInfo.status == 'complete') {
-        console.log('update')
-        console.log('highlightMode: ' + highlightMode);
         if(tab.url.match(baseUrlRegex))
             _chromeStorage.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         if(popupOpened) {
@@ -48,7 +47,6 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 
 //Ao clicar no ícone
 chrome.browserAction.onClicked.addListener(function (){
-    console.log('clicou')
     updatedPage = false;
     togglePopup();
     //Resetar highlights
@@ -59,7 +57,7 @@ chrome.browserAction.onClicked.addListener(function (){
 function togglePopup() {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage, othersMode: othersMode}});
         });
     });
 }
@@ -67,7 +65,7 @@ function togglePopup() {
 function togglePopupOption(_popupOpened) {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage}});
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage, othersMode: othersMode}});
         });
     });
 }
@@ -106,6 +104,15 @@ function toggleToggle(opened) {
     });
 }
 
+function toggleOthersMode(mode) {
+    othersMode = mode;
+    chrome.tabs.query({}, function(tabs) {
+        tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {msg: 'toggle_others_mode', data: {othersMode: othersMode}});
+        });
+    });
+}
+
 //Atualizar log
 chrome.runtime.onMessage.addListener(
     function(message, sender, sendResponse){  
@@ -139,6 +146,9 @@ chrome.runtime.onMessage.addListener(
                 break;
             case 'close_toggle':
                 toggleToggle(true);
+                break;
+            case 'toggle_others_mode':
+                toggleOthersMode(message.data.othersMode);
                 break;
         }
     }

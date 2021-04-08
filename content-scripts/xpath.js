@@ -83,7 +83,8 @@ var _xpath = {
 
         // map to range object
         var range = document.createRange();
-        range.setStart(startContainer.singleNodeValue, xpathRange.startOffset);
+        if(xpathRange.startOffset <= startContainer.singleNodeValue.length)
+            range.setStart(startContainer.singleNodeValue, xpathRange.startOffset);
         if(endOffset <= endContainer.singleNodeValue.length)
             range.setEnd(endContainer.singleNodeValue, endOffset);
         return range;

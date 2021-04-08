@@ -18,6 +18,7 @@ var dialog;
 var showingDialog = {};
 var highlightHoverCounter;
 var currentOtherHighlightHoverId;
+var othersMode = true;
 
 $.get(chrome.runtime.getURL('popup/hoverOthersHighlights.html'), function(data) {
     $('body').append(data);
@@ -52,14 +53,14 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
 
                 //chrome.storage.local.remove('destaquei_jwt_token');
                 
+                othersMode = message.data.othersMode;
+
                 chrome.storage.local.get('destaquei_jwt_token', function(data) {
-                    console.log(data);
                     if(data['destaquei_jwt_token']) {
                         jwt_token = data.destaquei_jwt_token;
                         _popup.openPopup('default');
                     }
                     else { //Se não estiver logado
-                        console.log('não logado')
                         _popup.openPopup('initial');
                     }
                 });
@@ -99,11 +100,14 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             break;
         case 'logged_in':
             chrome.storage.local.get('destaquei_jwt_token', function(data) {
-                console.log(data);
                 if(data['destaquei_jwt_token'])
                     jwt_token = data.destaquei_jwt_token;
             });
             _popup.openPopup('default');
+            break;
+        case 'toggle_others_mode':
+            othersMode = message.data.othersMode;
+            _popup.toggleOthersMode();
             break;
     }
     return true;
@@ -115,16 +119,31 @@ var _popup = {
         _popup.openPopup(type);
     },
 
+    toggleOthersMode: function() {
+        console.log(othersMode);
+        if(!othersMode) {
+            document.getElementById('others-highlight-toggle').checked = false;
+            _chromeStorage.removeAllHighlightsStyles('others');
+        }
+        else {
+            document.getElementById('others-highlight-toggle').checked = true;
+            this.sendToBack('load_others_highlights', {url: currentURL});
+        }
+    },
+
     openPopup: function(screen) {
-        console.log('openPopup');   
-        console.log(screen)
 
         if($('.highlighter-popup').length == 0){
             $.get(chrome.runtime.getURL('popup/base.html'), function(data) {
                 $('body').prepend(data);
+                _popup.openPopupAux(screen);
             });
         }
+        else
+            this.openPopupAux(screen);
+    },
 
+    openPopupAux: function(screen) {
         _utils.waitFor(_ => document.getElementsByClassName('highlighter-popup-body').length > 0).then(_ => {
             popupOpened = true;
             clearTimeout(counter);
@@ -139,9 +158,7 @@ var _popup = {
                     });
                     break;
                 case 'initial':
-                    console.log('initial screen')
                     $.get(chrome.runtime.getURL('popup/initialPopup.html'), function(data) {
-                        console.log(data);
                         $('.highlighter-popup.log .highlighter-popup-body').html(data);
                     });
                     break;
@@ -181,14 +198,22 @@ var _popup = {
             var that = this;
     
             clearTimeout(toggleCounter);
-            $('.highlight-toggle-container').remove();
-
-            if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
-                $.get(chrome.runtime.getURL('popup/emptyRating.html'), function(data) {
-                    $('.highlighter-popup.controller .highlighter-popup-body').html('');
-                    $('.highlighter-popup.controller .highlighter-popup-body').append(data);
-                });
+            if(screen == 'rate') {
+                $('.highlighter-popup.controller .highlight-toggle-container').remove();
             }
+            else {
+                $('.highlight-toggle-container').remove();
+            }
+
+            if(screen != 'rate') {
+                if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
+                    $.get(chrome.runtime.getURL('popup/emptyRating.html'), function(data) {
+                        $('.highlighter-popup.controller .highlighter-popup-body').html('');
+                        $('.highlighter-popup.controller .highlighter-popup-body').append(data);
+                    });
+                }
+            }
+
             
             _utils.waitFor(_ => document.getElementsByClassName('highlight-toggle-container').length > 0).then(_ => {
                 highlighter.changeHighlightColor(color);
@@ -226,7 +251,7 @@ var _popup = {
                             var email = document.getElementById('email-input').value;
                             var password = document.getElementById('password-input').value;
         
-                            chrome.runtime.sendMessage({msg: 'login_user', data: {email: email, password: password}});
+                            chrome.runtime.sendMessage({msg: 'login_user', data: {email: email, password: password, url: currentURL}});
                         });
                         document.getElementById('cancel-btn').addEventListener('click', function(){
                             that.openPopup('initial');
@@ -280,6 +305,16 @@ var _popup = {
                         break;
                 };
 
+                if(document.getElementById('others-highlight-toggle') != null) {
+                    if(othersMode)
+                        document.getElementById('others-highlight-toggle').checked = true;
+                    else
+                        document.getElementById('others-highlight-toggle').checked = false;
+                    document.getElementById('others-highlight-toggle').addEventListener('click', function() {
+                        that.sendToBack('toggle_others_mode', {othersMode: !othersMode})
+                    });
+                }
+
                 if(screen != 'rate') {
                     _utils.waitFor(_ => document.getElementsByClassName('carousel-wrapper').length > 0).then(_ => {
                         that.updateRating();
@@ -319,9 +354,7 @@ var _popup = {
                 });
 
                 $('.logout-btn').on('click', function() {
-                    chrome.storage.local.remove('destaquei_jwt_token');
-                    chrome.storage.local.remove('user_email');
-                    _popup.openPopup('initial');
+                    _popup.logOut();
                 });
     
                 document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
@@ -343,7 +376,6 @@ var _popup = {
     },
 
     closePopup: function() {
-        console.log('closePopup')
         if($('.highlighter-popup').length > 0) {
             popupOpened = false;
             clearTimeout(counter);
@@ -355,7 +387,6 @@ var _popup = {
     },
 
     closePopupBack: function() {
-        console.log('closePopupBack')
         chrome.runtime.sendMessage({msg: 'close_popup'});
     },
 
@@ -371,7 +402,6 @@ var _popup = {
 
     startToggleCounter: function(time) {
         var that = this;
-        console.log('startToggleCounter')
         toggleCounter = setTimeout(function(){
             if (!document.hidden)
                 that.closeToggleBack();
@@ -380,7 +410,6 @@ var _popup = {
 
     startHighlightHoverCounter: function(time) {
         var that = this;
-        console.log('startHighlightHoverCounter')
         highlightHoverCounter = setTimeout(function(){
             if (!document.hidden) {
                 showingDialog = {};
@@ -392,12 +421,10 @@ var _popup = {
     },
 
     toggleFixPopup: function() {
-        console.log('toggleFixPopup')
         chrome.runtime.sendMessage({msg: 'toggle_popup_fixed', data: {popupFixed: popupFixed}});
     },
 
     fixPopup: function() {
-        console.log('fixPopup')
         clearTimeout(counter);
         popupFixed = true;
         $('.header-btn#fix-btn').addClass('activated');
@@ -405,13 +432,11 @@ var _popup = {
     },
 
     unfixPopup: function() {
-        console.log('unfixPopup')
         popupFixed = false;
         $('.header-btn#fix-btn').removeClass('activated');
     },
 
     openToggle: function() {
-        console.log('openToggle')
         if($('.highlight-toggle-wrapper').length == 0){
             toggleOpened = true;
             chrome.runtime.sendMessage({msg: 'toggle_toggle', data: {toggleOpened: toggleOpened}});
@@ -428,7 +453,6 @@ var _popup = {
                     document.getElementById('highlight-toggle').checked = true;
 
                 $('#highlight-toggle').on('click', function() {
-                    console.log(highlightMode)
                     if(highlightMode) {
                         highlighter.turnOffHighlightModeBack();
                         if(!popupOpened)
@@ -444,7 +468,6 @@ var _popup = {
     },
 
     closeToggle: function() {
-        console.log('closeToggle')
         if($('.highlight-toggle-wrapper').length > 0) {
             toggleOpened = false;
             chrome.runtime.sendMessage({msg: 'toggle_toggle', data: {toggleOpened: toggleOpened}});
@@ -453,14 +476,11 @@ var _popup = {
     },
 
     closeToggleBack: function() {
-        console.log('closeToggleBack')
         chrome.runtime.sendMessage({msg: 'close_toggle'});
     },
 
     updateRating: function() {
         if(popupOpened) {
-            console.log('updateRatingFront')
-            console.log(ratingData)
             if(ratingData['pageRating']) {
                 var pageBar = $('#page-rate .rate-bar-value')[0];
                 var globalBar = $('#global-rate .rate-bar-value')[0];
@@ -491,7 +511,8 @@ var _popup = {
                     var length = ratingData.comments.length;
     
                     $('.carousel-wrapper').html('');
-                    document.getElementsByClassName('comment-counter')[0].textContent = '1 de ' + length + ' comentários';
+                    if(document.getElementsByClassName('comment-counter')[0])
+                        document.getElementsByClassName('comment-counter')[0].textContent = '1 de ' + length + ' comentários';
                     
                     ratingData.comments.forEach(comment => {                
                         var newComment = document.createElement('div');
@@ -574,14 +595,34 @@ var _popup = {
         });
     },
 
+    addHoverListeners: function() {
+        $('.highlighted').on({
+            mouseover: function (e) {
+                const id = $(this)[0].id;
+                $('.highlighted[id='+id+']').addClass('hovered');
+            },
+            mouseleave: function () {
+                const id = $(this)[0].id;
+                $('.highlighted[id='+id+']').removeClass('hovered');
+            }
+        });
+    },
+
     likeHighlight: function() {
         var id = currentOtherHighlightHoverId;
         var currentHighlight = othersHighlights.find(highlight => highlight._id == id);
-        _highlighter.removeHighlight(id);
+        _highlighter.removeHighlight(id, true);
         _chromeStorage.saveHighlight(currentHighlight.xpath, currentHighlight.text);
         this.startHighlightHoverCounter(2000);
         $('.like-btn').css('display', 'none');
         $('.liked-btn').css('display', 'block');
+    },
+
+    logOut: function() {
+        chrome.storage.local.remove('destaquei_jwt_token');
+        chrome.storage.local.remove('user_email');
+        _chromeStorage.removeAllHighlightsStyles('all', 'loadOthers');
+        _popup.openPopup('initial');
     },
 
     sendToBack: function(msg, data){

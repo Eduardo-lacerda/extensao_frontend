@@ -1,7 +1,3 @@
-.highlighted {
-    
-}
-
 .highlighted.yellow {
     background: #ffff72;
 }
@@ -18,6 +14,10 @@
     background: #cacaca;
 }
 
-.highlighted.others-color:hover,  .highlighted.others-color:hover *{
+/* .highlighted.others-color:hover,  .highlighted.others-color:hover *{
     background: #ababab;
+}
+ */
+.highlighted.hovered {
+    filter: brightness(0.8);
 }

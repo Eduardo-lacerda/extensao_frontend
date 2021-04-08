@@ -474,6 +474,7 @@
 .input-wrapper {
     margin-bottom: 9px;
     width: 80%;
+    height: 39px;
 }
 
 .input-wrapper label {
@@ -481,6 +482,11 @@
     font-size: 14px;
     color: #6C757D;
     margin-bottom: 3px;
+    line-height: 5px;
+}
+
+.highlighter-popup-login .input-wrapper label {
+    line-height: 15px;
 }
 
 .input-wrapper input {
