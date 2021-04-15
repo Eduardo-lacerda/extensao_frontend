@@ -95,7 +95,6 @@ var _highlighter = {
         var popupElement = '';
         var toggleElement = '';
         var doc = '';
-        //this.removeAllHighlightsStyles('all');
         if(popupOpened) {
             popupWasOpened = true;
             newDoc = document.cloneNode(true);
@@ -112,7 +111,7 @@ var _highlighter = {
         else {
             doc = document;
         }
-
+        highlightColor += ' mine-highlight';
         this.highlightLoadedText(xpath, highlightColor, id, doc);
 
         if(popupWasOpened) {
@@ -413,6 +412,7 @@ var _highlighter = {
     },
 
     addMineHighlightsListener: function() {
+        console.log($('.highlighted.mine-highlight'))
         $('dialog#mine-highlight-hover').on({
             mouseleave: function () {
                 _popup.startHighlightHoverCounter(2000);

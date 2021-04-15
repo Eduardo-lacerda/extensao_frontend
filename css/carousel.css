@@ -223,8 +223,8 @@ li {
 }
 
 
-.comments-wrapper {
-  height: 80px;
+.rate-window .comments-wrapper {
+  height: 70px;
   position: relative;
 }
 

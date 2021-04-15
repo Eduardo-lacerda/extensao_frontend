@@ -206,7 +206,6 @@ var _dataControl = {
 
     sendRating: function (ratingData) {
         var that = this;
-
         chrome.storage.local.get('destaquei_jwt_token', function (data) {
             $.ajax({
                 url: "https://visualiz.com.br/rate",
@@ -217,8 +216,8 @@ var _dataControl = {
                 crossDomain: true,
                 data: JSON.stringify(ratingData),
                 success: function (response) {
-                    
-                    that.sendToFront('success_message', { msg: "Avaliação enviada com sucesso!", type: "save_rating" });
+                    that.getRating(currentTabId, ratingData.page_url, ratingData.base_url);
+                    that.sendToFront('success_message_down', { msg: "Avaliação enviada com sucesso!", type: "save_rating" });
                 },
                 error: function (response) {
                     
@@ -269,7 +268,7 @@ var _dataControl = {
             success: function (response) {
                 
                 if (!response.error) {
-                    that.sendToFront('success_message', { msg: "Registrado com sucesso!", type: "register" });
+                    that.sendToFront('success_message_up', { msg: "Registrado com sucesso!", type: "register" });
                     that.verifyUser(response.results.verification);
                 }
             },

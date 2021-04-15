@@ -25,6 +25,7 @@ var othersMode = true;
 var currentScreen = 'default';
 var currentDownScreen = 'about-content';
 var cancelSearchOpened = false;
+var showingMessage = false;
 
 $.get(chrome.runtime.getURL('popup/hoverOthersHighlights.html'), function(data) {
     $('body').append(data);
@@ -102,8 +103,11 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             if(popupOpened)
                 _popup.updateRating();
             break;
-        case 'success_message':
-            _popup.showMessage(message.data, 'success');
+        case 'success_message_up':
+            _popup.showMessage(message.data, 'success', 'up');
+            break;
+        case 'success_message_down':
+            _popup.showMessage(message.data, 'success', 'down');
             break;
         case 'error_message':
             _popup.showMessage(message.data, 'error');
@@ -124,9 +128,13 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
 });
 
 var _popup = {
-    showMessage: function(data, type) {
+    showMessage: function(data, type, wichWindow) {
+        showingMessage = true;
         messageData = data;
-        _popup.openPopup(type);
+        if(wichWindow == 'up')
+            _popup.openPopup(type);
+        else
+            _popup.openPopupDown(type);
     },
 
     toggleOthersMode: function() {
@@ -282,6 +290,7 @@ var _popup = {
                 document.getElementById('success-msg').innerHTML = messageData.msg;
                 document.getElementById('cancel-btn').addEventListener('click', function(){
                     that.openPopup('initial');
+                    showingMessage = false;
                 });
                 break;
             case 'error':
@@ -291,6 +300,7 @@ var _popup = {
                         that.openPopup('register');
                     else
                         that.openPopup('initial');
+                        showingMessage = false;
                 });
                 break;
         };
@@ -377,6 +387,18 @@ var _popup = {
                     _popup.addDownPopupListeners(screen);
                 });
                 break;
+            case 'success':
+                $.get(chrome.runtime.getURL('popup/success.html'), function(data) {
+                    $('.highlighter-popup.controller .highlighter-popup-body').html(data);
+                    _popup.addDownPopupListeners(screen);
+                });
+                break;
+            case 'error':
+                $.get(chrome.runtime.getURL('popup/error.html'), function(data) {
+                    $('.highlighter-popup.controller .highlighter-popup-body').html(data);
+                    _popup.addDownPopupListeners(screen);
+                });
+                break;
         }
     },
 
@@ -410,6 +432,20 @@ var _popup = {
                         that.openPopupDown('rate');
                     });
                     that.updateRating();
+                });
+                break;
+            case 'success':
+                document.getElementById('success-msg').innerHTML = messageData.msg;
+                document.getElementById('cancel-btn').addEventListener('click', function(){
+                    that.openPopupDown('about-content');
+                    showingMessage = false;
+                });
+                break;
+            case 'error':
+                document.getElementById('error-msg').innerHTML = messageData.msg;
+                document.getElementById('cancel-btn').addEventListener('click', function(){
+                    that.openPopupDown('about-content');
+                    showingMessage = false;
                 });
                 break;
         }
@@ -534,7 +570,7 @@ var _popup = {
     },
 
     updateRating: function() {
-        if(popupOpened) {
+        if(popupOpened && !showingMessage) {
             if(ratingData['baseRating']) {
                 if(document.getElementsByClassName('rate-info-wrapper').length == 0)
                     _popup.openPopupDown('about-content');

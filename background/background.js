@@ -6,6 +6,7 @@ var color = 'yellow';
 var toggleOpened = false;
 var updatedPage = false;
 var baseUrlRegex = /^https?:\/\/[^\/]+/i;
+var currentTabId;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -21,6 +22,7 @@ chrome.runtime.onInstalled.addListener(function() {
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     updatedPage = true;
     if (changeInfo.status == 'complete') {
+        currentTabId = tabId;
         if(tab.url.match(baseUrlRegex))
             _dataControl.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         if(popupOpened) {
@@ -39,6 +41,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 //Ao trocar de tab
 chrome.tabs.onActivated.addListener(function(activeInfo) {
     chrome.tabs.get(activeInfo.tabId, function(tab) {
+        currentTabId = activeInfo.tabId;
         if(tab.url.match(baseUrlRegex))
             _dataControl.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         _dataControl.getAllHighlights(tab.url);

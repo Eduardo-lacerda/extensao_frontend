@@ -398,7 +398,7 @@
 }
 
 .comments-wrapper {
-    height: 102px;
+    height: 80px;
     background: #efefef;
     width: 263px;
     margin: 4px auto 10px auto;
@@ -716,6 +716,7 @@
     width: 249px;
     height: 79px;
     resize: none;
+    font-size: 13px;
 }
 /*-------------------------------------------------*/
 
@@ -827,7 +828,7 @@ dialog:not([open]) {
     width: 46%;
     position: absolute;
     right: 18px;
-    bottom: 18px;
+    bottom: 30px;
     height: 33px;
     font-size: 17px;
 }
