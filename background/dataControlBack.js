@@ -10,46 +10,56 @@ var jwtToken;
 chrome.extension.onMessage.addListener(function (message, messageSender, sendResponse) {
     switch (message.msg) {
         case "load_all_highlights":
-            _chromeStorage.getHighlights();
+            _dataControl.getHighlights();
             break;
         case "register_user":
-            _chromeStorage.registerUser(message.data);
+            _dataControl.registerUser(message.data);
             break;
         case "login_user":
-            _chromeStorage.loginUser(message.data);
+            _dataControl.loginUser(message.data);
             break;
         case "save_highlight":
-            _chromeStorage.saveHighlight(message.data);
+            _dataControl.saveHighlight(message.data);
             break;
         case "delete_highlight":
-            _chromeStorage.removeHighlight(message.data.highlightId, true);
+            _dataControl.removeHighlight(message.data.highlightId, true);
             break;
         case "search_highlights_substring":
-            _chromeStorage.getHighlights('updateLog', message.data.substring);
+            _dataControl.getHighlights('updateLog', message.data.substring);
             break;
         case "send_rating":
-            _chromeStorage.sendRating(message.data);
+            _dataControl.sendRating(message.data);
             break;
         case "get_all_highlights_and_others":
-            _chromeStorage.getAllHighlights(message.data.url);
+            _dataControl.getAllHighlights(message.data.url);
             break;
         case "load_others_highlights":
-            _chromeStorage.getOthersHighlights(message.data.url);
+            _dataControl.getOthersHighlights(message.data.url);
+            break;
+        case "update_log":
+            _dataControl.getHighlights('updateLog');
             break;
     }
     return true;
 });
 //--------------------------------------
 
-var _chromeStorage = {
+var _dataControl = {
     getAllHighlights: function(tabUrl) {
         if(othersMode)
-            this.getOthersHighlights(tabUrl);
+            this.getOthersHighlights(tabUrl, false);
         else 
             this.getHighlights('updateAll');
     },
 
-    getHighlights: function (callBack, substring) {
+    getAllHighlightsClosePopup: function(tabUrl) {
+        if(othersMode)
+            this.getOthersHighlights(tabUrl, true);
+        else 
+            this.getHighlights('updateAll');
+    },
+
+    getHighlights: function (callBack, substring, closePopup) {
         var that = this;
 
         chrome.storage.local.get('destaquei_jwt_token', function (data) {
@@ -80,9 +90,8 @@ var _chromeStorage = {
                             else if (callBack == 'updatePageHighlights')
                                 that.updatePageHighlights(data.highlights);
                             else if (callBack == 'updateAllAndOthers') {
-                                console.log('get highlights update all and others')
                                 that.updateLog(data.highlights);
-                                that.updateOthersHighlightsThenMine();
+                                that.updateOthersHighlightsThenMine(closePopup);
                             }
                         }
                     },
@@ -101,7 +110,7 @@ var _chromeStorage = {
         });
     },
 
-    getOthersHighlights: function (url) {
+    getOthersHighlights: function (url, closePopup) {
         var that = this;
         chrome.storage.local.get('destaquei_jwt_token', function (data) {
             var serviceUrl = '';
@@ -128,7 +137,7 @@ var _chromeStorage = {
                         var responseData = response.results.highlights;
                         othersHighlightsData = responseData;
                         if (data['destaquei_jwt_token']) {
-                            that.getHighlights('updateAllAndOthers');
+                            that.getHighlights('updateAllAndOthers', '', closePopup);
                         }
                         else {
                             that.updateOthersHighlights();
@@ -150,11 +159,11 @@ var _chromeStorage = {
     },
     
     updateOthersHighlights: function() {
-        this.sendToFront('update_others_highlights', othersHighlightsData);
+        this.sendToFront('update_others_highlights', {othersHighlightsData: othersHighlightsData});
     },
 
-    updateOthersHighlightsThenMine: function() {
-        this.sendToFront('update_others_highlights_then_mine', {othersHighlightsData: othersHighlightsData, highlightData: highlightData});
+    updateOthersHighlightsThenMine: function(closePopup) {
+        this.sendToFront('update_others_highlights_then_mine', {othersHighlightsData: othersHighlightsData, highlightData: highlightData, closePopup: closePopup});
     },
 
     saveHighlight: function (highlight) {
@@ -245,7 +254,7 @@ var _chromeStorage = {
     },
 
     updatePageHighlights: function (data) {
-        this.sendToFront('update_page_highlights', data);
+        this.sendToFront('update_page_highlights', {highlightData: data});
     },
 
     registerUser: function (data) {
@@ -333,9 +342,8 @@ var _chromeStorage = {
                     type: 'delete',
                     crossDomain: true,
                     success: function (response) {
-                        
                         if (!response.error) {
-                            that.getHighlights('updateAll');
+                            that.getHighlights('updateLog');
                         }
                     },
                     error: function (response) {
@@ -356,7 +364,6 @@ var _chromeStorage = {
         var that = this;
         
         var params = {"baseUrl": baseUrl, "pageUrl": pageUrl};
-        console.log(params)
         $.ajax({
             url: "https://visualiz.com.br/rate",
             contentType: "application/json",
@@ -368,7 +375,12 @@ var _chromeStorage = {
                 if (!response.error) {
                     var data = response.results.rate;
                     var newData = {};
-                    newData['pageRating'] = data.page_rate.toFixed(1);
+                    if(data.page_rate != null) {
+                        newData['pageRating'] = data.page_rate.toFixed(1);
+                    }
+                    else {
+                        newData['pageRating'] = data.page_rate;
+                    }
                     newData['baseRating'] = data.base_rate.toFixed(1);
                     newData['comments'] = data.comments; 
                     that.sendToFront('update_rating', { ratingData: newData }, tabId);

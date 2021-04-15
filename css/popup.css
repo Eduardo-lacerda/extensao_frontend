@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Signika+Negative:wght@300;400;600;700&display=swap');
 
-* {
+.highlighter-popup * {
+    font-family: 'Signika Negative', sans-serif;
     box-sizing: border-box;
 }
 
@@ -30,6 +31,7 @@
 
 .highlighter-popup.controller {
     top: 343px;
+    height: 257px;
 }
 
 .highlighter-popup-header .colors-wrapper {
@@ -109,10 +111,10 @@
     border: solid 1px #F7F6FF;;
     border-radius: 18px;
     padding: 6px 8px 6px 20px;
-    margin: 0 8px 10px auto;
+    margin: 0 4px 10px auto;
     position: relative;
     box-sizing: border-box;
-    width: 89%;
+    width: 91%;
     height: 60px;
 /*     background: rgb(39, 39, 39);
     color: white; */
@@ -120,20 +122,22 @@
 
 .highlighter-popup-log .log-text {
     margin: 0;
-    margin-right: 10px;
     vertical-align: baseline;
     display: inline-block;
     margin-right: 10px;
     text-overflow: ellipsis;
-    overflow: hidden;
+    overflow-x: hidden;
     box-sizing: content-box;
     color: #6C757D;
     padding-left: 4px;
-    width: 174px;
+    margin-right: 6px;
+    width: 179px;
+    padding-right: 5px;
     margin-top: 2px;
-    max-height: 43px;
+    max-height: 45px;
     line-height: 15px;
     font-size: 13px;
+    overflow-y: auto;
 }
 
 .highlighter-popup-log .log-icons {
@@ -222,20 +226,31 @@
     padding-top: 4px;
 }
 
+.highlighter-popup *::-webkit-scrollbar {
+    width: 6px;
+    background: #e2e2e2;
+    border-radius: 18px;
+}
+
+.highlighter-popup *::-webkit-scrollbar-thumb {
+    background: #bbbbbe;
+    border-radius: 18px;
+}
+
 .highlighter-popup-log::-webkit-scrollbar {
-    width: 24px;
-    background: transparent;
+    width: 24px !important;
+    background: transparent !important;
 }
 
 .highlighter-popup-log::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 18px;
-    border: solid 9px transparent;
+    background: transparent !important;
+    border-radius: 18px !important;
+    border: solid 9px transparent !important;
     box-shadow: inset 0 0 0px 30px #bbbbbe;
 }
 
 .highlighter-popup-log::-webkit-scrollbar-thumb:hover {
-    border: solid 7px transparent;
+    border: solid 7px transparent !important;
 }
 
 .others-toggle-wrapper {
@@ -272,20 +287,22 @@
 }
 
 .title-wrapper {
-    padding: 4px 10px 0px 12px;
+    padding: 7px 11px 0 19px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 4px;
     height: 33px;
+    line-height: 1;
 }
 
 .title-wrapper h5 {
-    font-size: 14px;
+    font-size: 16px;
     display: inline-flex;
     color: #6C757D;
     font-weight: bold;
     margin: 0;
+    padding: 0;
 }
 
 .others-toggle input:checked + .slider:before {
@@ -318,7 +335,7 @@
 .rate-title {
     display: flex;
     align-items: end;
-    margin-bottom: 9px;
+    margin-bottom: 4px;
 }
 
 .rate-title span {
@@ -337,7 +354,7 @@
     border-radius: 40px;
     width: 100%;
     height: 20px;
-    margin-bottom: 7px;
+    margin-bottom: 9px;
 }
 
 .rate-bar-value {
@@ -733,6 +750,16 @@
     font-size: 19px;
     top: 2px;
 }
+
+.search-wrapper .cancel-search-icon {
+    position: absolute;
+    font-size: 18px;
+    right: 24px;
+    top: 2px;
+    color: #909090;
+    cursor: pointer;
+    display: none;
+}
 /*------------------------------------------------*/
 
 
@@ -742,7 +769,7 @@
     z-index: 0;
 }
 
-#others-highlight-hover {
+#others-highlight-hover, #mine-highlight-hover {
     width: fit-content;
     background: white;
     border-radius: 9px;
@@ -756,12 +783,59 @@
     left: -100%;
 }
 
+dialog:not([open]) {
+    display: none;
+}
+
 .hover-icon-wrapper {
     height: 23px;
     cursor: pointer;
 }
 
-.hover-icon-wrapper.liked-btn {
+.hover-icon-wrapper.liked-btn, .hover-icon-wrapper.deleted-btn {
     display: none;
+    color: #DD5151;
 }
+
 /*------------------------------------------------*/
+
+
+
+/*-----------------EMPTY RATING--------------------*/
+.highlighter-popup-empty-rating {
+    padding: 18px;
+    position: relative;
+    height: 227px;
+    box-sizing: border-box;
+}
+
+.highlighter-popup-empty-rating .no-rating-yet {
+    font-size: 14px;
+    margin-bottom: 9px;
+    margin-top: 5px;
+    display: block;
+}
+
+.highlighter-popup-empty-rating .be-the-first {
+    font-size: 30px;
+    font-weight: bold;
+    display: block;
+    line-height: 1;
+}
+
+.highlighter-popup-empty-rating .rate-btn {
+    width: 46%;
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    height: 33px;
+    font-size: 17px;
+}
+/*-------------------------------------------------*/
+
+
+.rate-bar.empty {
+    color: #404040;
+    font-size: 11px;
+    padding: 4px;
+}

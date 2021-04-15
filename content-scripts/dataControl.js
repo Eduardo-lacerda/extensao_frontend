@@ -1,34 +1,34 @@
 const currentURL = window.location.href;
 var log = {};
-var highlights = {};
+var highlights = [];
 var logsHTML = {};
-var othersHighlights = {};
+var othersHighlights = [];
 
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
     switch(message.msg) {
         case "update_log":
-            _chromeStorage.updateLog(message.data);
+            _dataControl.updateLog(message.data);
             break;
         case "update_page_highlights":
-            _chromeStorage.stylizeHighlights(message.data);
+            _dataControl.stylizeHighlights(message.data);
             break;
         case "update_others_highlights":
-            _chromeStorage.stylizeOthersHighlights(message.data);
+            _dataControl.stylizeHighlights(message.data);
             break;
         case "remove_all_highlights_styles":
-            _chromeStorage.removeAllHighlightsStyles('others', 'loadAllHighlightsAndOthers');
+            _dataControl.removeAllHighlightsStyles('others', 'loadAllHighlightsAndOthers');
             break;
         case "update_others_highlights_then_mine":
-            _chromeStorage.stylizeAllHighlights(message.data);
+            _dataControl.stylizeHighlights(message.data);
             break;
     }
     return true;
 });
 //--------------------------------------
 
-var _chromeStorage = {
+var _dataControl = {
     /* Estrutura do objeto:
     {
         'allHighlights': {
@@ -51,7 +51,7 @@ var _chromeStorage = {
                 item.addEventListener('click', event => {
                     const highlightId = $(event.target).attr('id');
                     const url = $(event.target).parent().attr('id');
-                    _chromeStorage.deleteHighlight(highlightId, url);
+                    _dataControl.deleteHighlight(highlightId, url);
                 })
               })
         }, 20);
@@ -59,18 +59,23 @@ var _chromeStorage = {
 
     removeAllHighlightsStyles: function(whatToRemove, callback) {
         if(whatToRemove == 'all') {
-            highlights.forEach(item => {
-                _highlighter.removeHighlight(item._id, false);
-              });  
-              othersHighlights.forEach(item => {
-                _highlighter.removeHighlight(item._id, false);
-              });  
+            if(highlights.length > 0) {
+                highlights.forEach(item => {
+                    _highlighter.removeHighlight(item._id);
+                });  
+            }
+            if(othersHighlights.length > 0) {
+                othersHighlights.forEach(item => {
+                    _highlighter.removeHighlight(item._id);
+                });  
+            }
         }
         else if(whatToRemove == 'others') {
-            console.log('removendo estilo others')
-            othersHighlights.forEach(item => {
-                _highlighter.removeHighlight(item._id, false);
-              });  
+            if(othersHighlights.length > 0) {
+                othersHighlights.forEach(item => {
+                    _highlighter.removeHighlight(item._id);
+                });  
+            }
         }
 
         if(callback) {
@@ -83,44 +88,80 @@ var _chromeStorage = {
         }
     },
 
-    stylizeHighlights: function (data) {
+    stylizeHighlights: function(data) {
+        var popupWasOpened = false;
+        var newDoc = '';
+        var popupElement = '';
+        var toggleElement = '';
+        var doc = '';
+        console.log(data)
+        //this.removeAllHighlightsStyles('all');
+        if(popupOpened) {
+            popupWasOpened = true;
+            newDoc = document.cloneNode(true);
+            if($(newDoc).find('.highlighter-popup').length > 0) {
+                popupElement = $(newDoc).find('.highlighter-popup');
+                $(newDoc).find('.highlighter-popup').remove();
+            }
+            if($(newDoc).find('.highlight-toggle-wrapper').length > 0) {
+                toggleElement = $(newDoc).find('.highlight-toggle-wrapper')[0];
+                $(newDoc).find('.highlight-toggle-wrapper').remove();
+            }
+            doc = newDoc;
+        }
+        else {
+            doc = document;
+        }
+
+        if(data['highlightData'])
+            this.stylizeMineHighlights(data.highlightData, doc);
+        if(data['othersHighlightsData'])
+            this.stylizeOthersHighlights(data.othersHighlightsData, doc);
+
+        if(popupWasOpened) {
+            if(popupElement != '') {
+                doc.querySelector('body').prepend(popupElement[1]);
+                doc.querySelector('body').prepend(popupElement[0]);
+            }
+            if(toggleElement != '') {
+                doc.querySelector('body').prepend(toggleElement);
+            }
+            document.documentElement.innerHTML = doc.documentElement.innerHTML;
+            _popup.addPopupListeners(currentScreen);
+            _popup.addDownPopupListeners(currentDownScreen);
+            _popup.addToggleListeners();
+        }
+        if(data['highlightData'])
+            _highlighter.addMineHighlightsListener();
+        if(data['othersHighlightsData']) {
+            _highlighter.addOthersHighlightsListener();
+        }
+        _highlighter.addHoverListeners();
+    },
+
+    stylizeMineHighlights: function (data, doc) {
         highlights = data;
-        console.log(highlights);
         if(data != undefined) {
             data.forEach(highlight => {
-                if(highlight.url == currentURL)
-                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id);
+                if(highlight.url == currentURL) {
+                    highlight.color += ' mine-highlight';
+                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight.id, doc);
+                }
             });
-            _popup.addHoverListeners();
         }
-        console.log('fim mine')
     },
 
-    stylizeAllHighlights: function(data) {
-/*         var wasOpened = false;
-        if(popupOpened) {
-            _popup.closePopup();
-            wasOpened = true;
-        } */
-        this.stylizeHighlights(data.highlightData);
-        this.stylizeOthersHighlights(data.othersHighlightsData);
-/*         if(wasOpened)
-            _popup.openPopup('default'); */
-    },
-
-    stylizeOthersHighlights: function (highlightData) {
+    stylizeOthersHighlights: function (highlightData, doc) {
         othersHighlights = highlightData;
-        console.log(highlightData);
         if(highlightData != undefined) {
             highlightData.forEach(highlight => {
-                highlight.color = 'others-color';
-                highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
-                _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id);
+                if(highlight.url == currentURL) {
+                    highlight.color = 'others-color';
+                    highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
+                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id, doc);
+                }
             });
-            _popup.addOthersHighlightsListener();
-            _popup.addHoverListeners();
         }
-        console.log('fim others')
     },
 
     saveHighlight: function(xpath, text) {
@@ -134,7 +175,7 @@ var _chromeStorage = {
         chrome.runtime.sendMessage({msg: 'delete_highlight', data: {highlightId: highlightId}});
 
         //Remover estilo do highlight, caso seja dessa página
-        _highlighter.removeHighlight(highlightId, true);
+        _highlighter.removeHighlight(highlightId);
     },
 };
 

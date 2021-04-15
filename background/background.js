@@ -22,7 +22,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     updatedPage = true;
     if (changeInfo.status == 'complete') {
         if(tab.url.match(baseUrlRegex))
-            _chromeStorage.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+            _dataControl.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
         if(popupOpened) {
             popupOpened = !popupOpened;
             if(toggleOpened)
@@ -31,7 +31,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         }
         chrome.storage.local.set({'highlightMode': false}, function() {});
         //Carregar os highlights já feitos na página e o log
-        _chromeStorage.getAllHighlights(tab.url);
+        _dataControl.getAllHighlightsClosePopup(tab.url);
         //--------------------------------------
     }
 });
@@ -40,8 +40,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 chrome.tabs.onActivated.addListener(function(activeInfo) {
     chrome.tabs.get(activeInfo.tabId, function(tab) {
         if(tab.url.match(baseUrlRegex))
-            _chromeStorage.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
-        _chromeStorage.getAllHighlights(tab.url);
+            _dataControl.getRating(activeInfo.tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+        _dataControl.getAllHighlights(tab.url);
     });
 });
 
@@ -51,6 +51,18 @@ chrome.browserAction.onClicked.addListener(function (){
     togglePopup();
     //Resetar highlights
     //chrome.storage.local.set({'allHighlights': {}}, function() {});
+});
+
+chrome.contextMenus.create({
+    id: "highlight-text",
+    title: "Destacar Texto",
+    contexts: ["all"]
+});
+
+chrome.contextMenus.onClicked.addListener(function(info, tab) {
+    if (info.menuItemId == "highlight-text") {
+        _dataControl.sendToFront('save_highlight', {});
+    }
 });
 
 
@@ -80,6 +92,7 @@ function togglePopupFixed(_popupFixed) {
 }
 
 function toggleHighlightMode(activated) {
+    highlightMode = activated;
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_highlight_mode', data: {highlightMode: activated}});
@@ -118,10 +131,10 @@ chrome.runtime.onMessage.addListener(
     function(message, sender, sendResponse){  
         switch(message.msg) {
             case 'update_log':
-                _chromeStorage.getHighlights('updateLog');
+                _dataControl.getHighlights('updateLog');
                 break;
             case 'update_all':
-                _chromeStorage.getHighlights('updateAll');
+                _dataControl.getHighlights('updateAll');
                 break;
             case 'toggle_popup':
                 popupOpened = message.data.popupOpened;

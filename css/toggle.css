@@ -3,8 +3,8 @@
     padding-top: 10px;
     box-sizing: border-box;
     margin-right: 4px;
-    width: 44px;
-    height: 42px;
+    width: 145px;
+    height: 37px;
     margin-left: 9px;
     justify-content: space-evenly;
     position: fixed;
@@ -13,11 +13,11 @@
     top: 1px;
 }
 
-.toggle {
+.highlight-toggle-wrapper .toggle {
     position: relative;
+    width: 100%;
     display: inline-block;
-    width: 38px;
-    height: 23px;
+    height: 100%;
 }
 
 .toggle input { 
@@ -50,6 +50,23 @@
     border-radius: 50%;
 }
 
+.highlight-toggle-wrapper .slider::before {
+    height: 19px;
+    background-color: #00bd53;
+    bottom: 4px;
+    left: auto;
+    right: 61px;
+    width: 55px;
+    border-radius: 14px;
+    position: absolute;
+    content: "";
+    transition: all 0.4s ease 0s;
+}
+
+.highlight-toggle-wrapper .slider {
+    background-color: #F8F9FA;
+}
+
 input:checked + .slider {
     background-color: #00bd53;
 }
@@ -59,7 +76,56 @@ input:focus + .slider {
 }
 
 .toggle input:checked + .slider:before {
-    -webkit-transform: translateX(15px);
-    -ms-transform: translateX(15px);
-    transform: translateX(15px);
+    -webkit-transform: translateX(56px);
+    -ms-transform: translateX(56px);
+    transform: translateX(56px);
+}
+
+.marker-icon-wrapper {
+    position: absolute;
+    z-index: 2;
+    left: 8px;
+    top: 13px;
+}
+
+.highlight-toggle-wrapper input:checked + .slider {
+    background: #F8F9FA;
+}
+
+.highlight-toggle-wrapper .marker-icon {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 3px;
+    left: 0px;
+}
+
+.toggle-text-wrapper {
+    background: transparent;
+    font-size: 11px;
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    pointer-events: none;
+    color: #6C757D;
+}
+
+.toggle-text-wrapper.active {
+    color: white;
+}
+
+#turned-off-wrapper {
+    left: 32px;
+}
+
+#turned-on-wrapper {
+    right: 16px;
+}
+
+input:not(:checked) ~ #turned-off-wrapper, input:checked ~ #turned-on-wrapper {
+    color: white;
+}
+
+.highlight-toggle-wrapper input:not(:checked) + .slider::before {
+    background-color: #DD5151;
 }

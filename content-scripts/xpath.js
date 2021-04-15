@@ -57,13 +57,13 @@ var _xpath = {
         };
     },
     
-    createRangeFromXPathRange: function (xpathRange) {
+    createRangeFromXPathRange: function (xpathRange, doc) {
         "use strict";
         var startContainer, endContainer, endOffset, evaluator = new XPathEvaluator();
 
         // must have legal start and end container nodes
         startContainer = evaluator.evaluate(xpathRange.startContainerPath,
-            document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            doc.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
         if (!startContainer.singleNodeValue) {
             return null;
         }
@@ -73,7 +73,7 @@ var _xpath = {
             endOffset = xpathRange.startOffset;
         } else {
             endContainer = evaluator.evaluate(xpathRange.endContainerPath,
-                document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                doc.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
             if (!endContainer.singleNodeValue) {
                 return null;
             }
@@ -82,7 +82,7 @@ var _xpath = {
         }
 
         // map to range object
-        var range = document.createRange();
+        var range = doc.createRange();
         if(xpathRange.startOffset <= startContainer.singleNodeValue.length)
             range.setStart(startContainer.singleNodeValue, xpathRange.startOffset);
         if(endOffset <= endContainer.singleNodeValue.length)

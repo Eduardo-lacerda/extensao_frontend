@@ -15,7 +15,10 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             }
             break;
         case 'wrap_highlight':
-            _highlighter.highlightLoadedText(message.data.xpath, color, message.data.highlightId); 
+            _highlighter.highlightOneLoadedText(message.data.xpath, color, message.data.highlightId); 
+            break;
+        case 'save_highlight':
+            _highlighter.highlightText();
             break;
     }
     return true;
@@ -73,17 +76,8 @@ var _highlighter = {
     },
 
     highlightText: function() {
-        var wasOpened = false;
-        if(popupOpened) {
-            wasOpened = true;
-            _popup.closePopup();
-        }
-        
         var sel = window.getSelection ? window.getSelection() : document.selection.createRange(); // FF : IE
         var range = sel.getRangeAt(0);
-
-        if(wasOpened)
-            _popup.openPopup('default');
 
         //if(range.startOffset != 0 && range.endOffset != 0 && (range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY'))
         if(range.startContainer.nodeName != 'BODY' && range.endContainer.nodeName != 'BODY') {
@@ -91,35 +85,70 @@ var _highlighter = {
             const selectedText = range.toString();
             currentRange = range;
             //const id = _utils.create_UUID();
-            _chromeStorage.saveHighlight(xpath, selectedText);
+            _dataControl.saveHighlight(xpath, selectedText);
         }
     },
+
+    highlightOneLoadedText: function(xpath, highlightColor, id) {
+        var popupWasOpened = false;
+        var newDoc = '';
+        var popupElement = '';
+        var toggleElement = '';
+        var doc = '';
+        //this.removeAllHighlightsStyles('all');
+        if(popupOpened) {
+            popupWasOpened = true;
+            newDoc = document.cloneNode(true);
+            if($(newDoc).find('.highlighter-popup').length > 0) {
+                popupElement = $(newDoc).find('.highlighter-popup');
+                $(newDoc).find('.highlighter-popup').remove();
+            }
+            if($(newDoc).find('.highlight-toggle-wrapper').length > 0) {
+                toggleElement = $(newDoc).find('.highlight-toggle-wrapper')[0];
+                $(newDoc).find('.highlight-toggle-wrapper').remove();
+            }
+            doc = newDoc;
+        }
+        else {
+            doc = document;
+        }
+
+        this.highlightLoadedText(xpath, highlightColor, id, doc);
+
+        if(popupWasOpened) {
+            if(popupElement != '') {
+                doc.querySelector('body').prepend(popupElement[1]);
+                doc.querySelector('body').prepend(popupElement[0]);
+            }
+            if(toggleElement != '') {
+                doc.querySelector('body').prepend(toggleElement);
+            }
+            document.documentElement.innerHTML = doc.documentElement.innerHTML;
+            _popup.addPopupListeners(currentScreen);
+            _popup.addDownPopupListeners(currentDownScreen);
+            _popup.addToggleListeners();
+        }
+        _highlighter.addMineHighlightsListener();
+        _highlighter.addOthersHighlightsListener();
+        _highlighter.addHoverListeners();
+    },
     
-    highlightLoadedText: function(xpath, highlightColor, id) {
-        var range = _xpath.createRangeFromXPathRange(xpath);
+    highlightLoadedText: function(xpath, highlightColor, id, doc) {
+        var range = _xpath.createRangeFromXPathRange(xpath, doc);
         if(range != null)
             this.wrapSelection(range, highlightColor, id);
     },
 
-    removeHighlight: function (id, closePopup) {
-        if(closePopup) {
-            var popupWasOpened = false;
-            if(popupOpened) {
-                popupWasOpened = true;
-                _popup.closePopup();
-            }
-        }
-
-
+    removeHighlight: function (id) {
         // id is for first span in list
-        var spanList = $('[id='+ id +']');
         var that = this;
+        var spanList = $('[id='+ id +']:not(.log-delete)');
         Array.prototype.forEach.call(spanList, span => {
-            that.removeHighlightAux(span, closePopup, popupWasOpened);
-        })
+            that.removeHighlightAux(span);
+        });
     },
 
-    removeHighlightAux: function(span, closePopup, popupWasOpened) {
+    removeHighlightAux: function(span) {
         if (!this.isHighlightSpan(span)) {
             return false;
         }
@@ -146,9 +175,6 @@ var _highlighter = {
                 }
             }
         }
-
-        if(closePopup && popupWasOpened)
-            _popup.openPopup('default');
 
         // iterate whilst all tests for being a highlight span node are passed
         while (this.isHighlightSpan(span)) {
@@ -180,7 +206,7 @@ var _highlighter = {
         "use strict";
         // highlights are wrapped in one or more spans
         //Checar se id já existe no documento
-        if(document.getElementById(id) != null)
+        if($('#'+id+':not(.log-delete)').length > 0)
             return null;
         var span = document.createElement("SPAN");
         span.className = 'highlighted';
@@ -350,10 +376,97 @@ var _highlighter = {
     },
 
     isHighlightSpan: function (node) {
-        return node &&
+/*         return node &&
             node.nodeType === Node.ELEMENT_NODE && node.nodeName === "SPAN" &&
-            node.firstSpan !== undefined;
-    }
+            node.firstSpan !== undefined; */
+            return node && node.classList.contains('highlighted');
+    },
+
+    addOthersHighlightsListener: function() {
+        $('dialog#others-highlight-hover').on({
+            mouseleave: function () {
+                _popup.startOthersHighlightHoverCounter(2000);
+            },
+            mouseenter: function() {
+                clearTimeout(highlightOthersHoverCounter);
+            }
+        });
+        $('#like-btn').on('click', function() {
+            _highlighter.likeHighlight();
+        });
+        $('.highlighted.others-color.others-highlight').on({
+            mouseover: function (e) {
+                const id = $(this)[0].id;
+                if(!(''+id in showingOthersDialog)) {
+                    showingOthersDialog[id] = false;
+                }
+                if(showingOthersDialog[id] == false) {
+                    currentOtherHighlightHoverId = id;
+                    othersDialog = $("dialog#others-highlight-hover")[0];
+                    othersDialog.show();
+                    $("dialog#others-highlight-hover").css("transform","translate3d("+e.pageX+"px,"+e.pageY+"px,0px)");
+                    showingOthersDialog = {};
+                    showingOthersDialog[id] = true;
+                }
+            }
+        });
+    },
+
+    addMineHighlightsListener: function() {
+        $('dialog#mine-highlight-hover').on({
+            mouseleave: function () {
+                _popup.startHighlightHoverCounter(2000);
+            },
+            mouseenter: function() {
+                clearTimeout(highlightHoverCounter);
+            }
+        });
+        $('#delete-highlight-btn').on('click', function() {
+            _dataControl.deleteHighlight(currentHighlightHoverId);
+            $('.deleted-btn').css('display', 'block');
+            $('.delete-btn').css('display', 'none');
+            _popup.sendToBack('update_log', {});
+        });
+        $('.highlighted.mine-highlight').on({
+            mouseover: function (e) {
+                const id = $(this)[0].id;
+                if(!(''+id in showingMineDialog)) {
+                    showingMineDialog[id] = false;
+                }
+                if(showingMineDialog[id] == false) {
+                    currentHighlightHoverId = id;
+                    mineDialog = $("dialog#mine-highlight-hover")[0];
+                    mineDialog.show();
+                    $("dialog#mine-highlight-hover").css("transform","translate3d("+e.pageX+"px,"+e.pageY+"px,0px)");
+                    showingMineDialog = {};
+                    showingMineDialog[id] = true;
+                }
+            }
+        });
+    },
+
+    addHoverListeners: function() {
+        $('.highlighted').on({
+            mouseover: function (e) {
+                const id = $(this)[0].id;
+                $('.highlighted[id='+id+']').addClass('hovered');
+            },
+            mouseleave: function () {
+                const id = $(this)[0].id;
+                $('.highlighted[id='+id+']').removeClass('hovered');
+            }
+        });
+    },
+
+    likeHighlight: function() {
+        var id = currentOtherHighlightHoverId;
+        var currentHighlight = othersHighlights.find(highlight => highlight._id == id);
+        _highlighter.removeHighlight(id);
+        _dataControl.saveHighlight(currentHighlight.xpath, currentHighlight.text);
+        this.startHighlightHoverCounter(2000);
+        $('.like-btn').css('display', 'none');
+        $('.liked-btn').css('display', 'block');
+    },
 }
 
 _highlighter.addEventListeners();

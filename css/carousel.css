@@ -45,11 +45,11 @@
 
 .comments-wrapper * {
   box-sizing: border-box;
-  scrollbar-color: transparent transparent; /* thumb and track color */
-  scrollbar-width: 0px;
+/*   scrollbar-color: transparent transparent;
+  scrollbar-width: 0px; */
 }
 
-.comments-wrapper *::-webkit-scrollbar {
+/* .comments-wrapper *::-webkit-scrollbar {
   width: 0;
 }
 
@@ -60,7 +60,7 @@
 .comments-wrapper *::-webkit-scrollbar-thumb {
   background: transparent;
   border: none;
-}
+} */
 
 .comments-wrapper * {
   -ms-overflow-style: none;
@@ -234,15 +234,18 @@ li {
   z-index: 1;
   font-size: 12px;
   width: 100%;
+}
+
+.comment-owner .user-name {
   color: #000065;
 }
 
-.comment-text {
+.carousel-slide .comment-text {
   position: absolute;
   z-index: 1;
   max-height: 32px;
   top: 44%;
-  overflow-y: hidden;
+  overflow-y: auto;
   width: 81%;
   font-size: 13px;
   left: 50%;
