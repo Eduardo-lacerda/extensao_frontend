@@ -105,7 +105,8 @@ input:focus + .slider {
     font-size: 11px;
     position: absolute;
     z-index: 2;
-    top: 8px;
+    top: 50%;
+    transform: translateY(-7px);
     pointer-events: none;
     color: #6C757D;
 }
