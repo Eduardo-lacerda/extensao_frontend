@@ -94,7 +94,6 @@ var _dataControl = {
         var popupElement = '';
         var toggleElement = '';
         var doc = '';
-        console.log(data)
         //this.removeAllHighlightsStyles('all');
         if(popupOpened) {
             popupWasOpened = true;

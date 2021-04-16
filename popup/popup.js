@@ -109,8 +109,11 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case 'success_message_down':
             _popup.showMessage(message.data, 'success', 'down');
             break;
-        case 'error_message':
-            _popup.showMessage(message.data, 'error');
+        case 'error_message_up':
+            _popup.showMessage(message.data, 'error', 'up');
+            break;
+        case 'error_message_down':
+            _popup.showMessage(message.data, 'error', 'down');
             break;
         case 'logged_in':
             chrome.storage.local.get('destaquei_jwt_token', function(data) {
@@ -165,7 +168,7 @@ var _popup = {
         clearTimeout(counter);
         chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
 
-        if(screen != 'rate') {
+        if(screen != 'rate' && screen != 'success' && screen != 'rate') {
             if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
                 _popup.openPopupDown('empty-rating');
             }
@@ -298,9 +301,13 @@ var _popup = {
                 document.getElementById('cancel-btn').addEventListener('click', function(){
                     if(messageData.type == 'register')
                         that.openPopup('register');
-                    else
+                    else if(messageData.type == 'login') {
+                        that.openPopup('login');
+                    }
+                    else {
                         that.openPopup('initial');
-                        showingMessage = false;
+                    }     
+                    showingMessage = false;
                 });
                 break;
         };

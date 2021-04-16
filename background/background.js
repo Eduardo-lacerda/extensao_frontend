@@ -63,9 +63,7 @@ chrome.contextMenus.create({
 });
 
 chrome.contextMenus.onClicked.addListener(function(info, tab) {
-    if (info.menuItemId == "highlight-text") {
-        _dataControl.sendToFront('save_highlight', {});
-    }
+    _dataControl.sendToFront('save_highlight', {});
 });
 
 

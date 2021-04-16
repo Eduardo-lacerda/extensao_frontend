@@ -266,19 +266,18 @@ var _dataControl = {
             crossDomain: true,
             data: JSON.stringify(data),
             success: function (response) {
-                
                 if (!response.error) {
                     that.sendToFront('success_message_up', { msg: "Registrado com sucesso!", type: "register" });
                     that.verifyUser(response.results.verification);
                 }
             },
             error: function (response) {
-                
+                response = response.responseJSON;
                 if (response.error) {
                     if (response.errors)
-                        that.sendToFront('error_message', { msg: response.errors.msg, type: "register" });
+                        that.sendToFront('error_message_up', { msg: response.errors.msg, type: "register" });
                     else
-                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "register" });
+                        that.sendToFront('error_message_up', { msg: "Erro no servidor", type: "register" });
                 }
             }
         })
@@ -305,11 +304,13 @@ var _dataControl = {
                 }
             },
             error: function (response) {
+                console.log(response)
+                response = response.responseJSON;
                 if (response.error) {
                     if (response.errors)
-                        that.sendToFront('error_message', { msg: response.errors, type: "register" });
+                        that.sendToFront('error_message_up', { msg: response.errors, type: "login" });
                     else
-                        that.sendToFront('error_message', { msg: "Erro no servidor", type: "register" });
+                        that.sendToFront('error_message_up', { msg: "Erro no servidor", type: "login" });
                 }
             }
         })

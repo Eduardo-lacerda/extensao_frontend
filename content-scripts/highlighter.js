@@ -412,7 +412,6 @@ var _highlighter = {
     },
 
     addMineHighlightsListener: function() {
-        console.log($('.highlighted.mine-highlight'))
         $('dialog#mine-highlight-hover').on({
             mouseleave: function () {
                 _popup.startHighlightHoverCounter(2000);
