@@ -462,7 +462,7 @@ var _highlighter = {
         var currentHighlight = othersHighlights.find(highlight => highlight._id == id);
         _highlighter.removeHighlight(id);
         _dataControl.saveHighlight(currentHighlight.xpath, currentHighlight.text);
-        this.startHighlightHoverCounter(2000);
+        _popup.startHighlightHoverCounter(2000);
         $('.like-btn').css('display', 'none');
         $('.liked-btn').css('display', 'block');
     },

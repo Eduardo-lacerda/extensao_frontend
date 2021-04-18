@@ -26,6 +26,8 @@ var currentScreen = 'default';
 var currentDownScreen = 'about-content';
 var cancelSearchOpened = false;
 var showingMessage = false;
+var overLimit = false;
+var loggedIn = false;
 
 $.get(chrome.runtime.getURL('popup/hoverOthersHighlights.html'), function(data) {
     $('body').append(data);
@@ -65,15 +67,12 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
                 
                 othersMode = message.data.othersMode;
 
-                chrome.storage.local.get('destaquei_jwt_token', function(data) {
-                    if(data['destaquei_jwt_token']) {
-                        jwt_token = data.destaquei_jwt_token;
-                        _popup.openPopup('default');
-                    }
-                    else { //Se não estiver logado
-                        _popup.openPopup('initial');
-                    }
-                });
+                if(!overLimit) {
+                    _popup.openPopup('default');
+                }
+                else { //Se tiver passado do limite de highlights
+                    _popup.openPopup('initial');
+                }
                 if(!message.data.toggleOpened)
                     _popup.openToggle();
             }
@@ -116,6 +115,7 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             _popup.showMessage(message.data, 'error', 'down');
             break;
         case 'logged_in':
+            loggedIn = true;
             chrome.storage.local.get('destaquei_jwt_token', function(data) {
                 if(data['destaquei_jwt_token'])
                     jwt_token = data.destaquei_jwt_token;
@@ -125,6 +125,10 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
         case 'toggle_others_mode':
             othersMode = message.data.othersMode;
             _popup.toggleOthersMode();
+            break;
+        case 'exceeded_limit':
+            overLimit = true;
+            _popup.openPopup('initial');
             break;
     }
     return true;
@@ -167,6 +171,19 @@ var _popup = {
         popupOpened = true;
         clearTimeout(counter);
         chrome.runtime.sendMessage({msg: 'toggle_popup', data: {popupOpened: popupOpened}});
+
+        chrome.storage.local.get('destaquei_jwt_token', function(data) {
+            if(data['destaquei_jwt_token']) {
+                loggedIn = true;
+                $('.logout-wrapper').css('display', 'block');
+                $('.login-header-wrapper').css('display', 'none');
+            }
+            else {
+                loggedIn = false;
+                $('.logout-wrapper').css('display', 'none');
+                $('.login-header-wrapper').css('display', 'block');
+            }
+        });
 
         if(screen != 'rate' && screen != 'success' && screen != 'rate') {
             if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
@@ -223,6 +240,12 @@ var _popup = {
                     _popup.addPopupListeners(screen);
                 });
                 break;
+            case 'report-error':
+                $.get(chrome.runtime.getURL('popup/reportError.html'), function(data) {
+                    $('.highlighter-popup.log .highlighter-popup-body').html(data);
+                    _popup.addPopupListeners(screen);
+                });
+                break;
         }
 
         clearTimeout(toggleCounter);
@@ -274,6 +297,16 @@ var _popup = {
                 document.getElementById('cancel-btn').addEventListener('click', function(){
                     that.openPopup('initial');
                 });
+
+                document.addEventListener("keyup", function(event) {
+                    if(event.key == 'Enter') {
+                        var name = document.getElementById('name-input').value;
+                    var email = document.getElementById('email-input').value;
+                    var password = document.getElementById('password-input').value;
+
+                    chrome.runtime.sendMessage({msg: 'register_user', data: {name: name, email: email, password: password}});
+                    }
+                });
                 break;
             case 'login':
                 document.getElementById('login-btn').addEventListener('click', function(){
@@ -287,6 +320,18 @@ var _popup = {
                 });
                 document.getElementById('register-cta').addEventListener('click', function(){
                     that.openPopup('register');
+                });
+                document.getElementById('forgot-password-btn').addEventListener('click', function(){
+                    that.openPopup('report-error');
+                });
+
+                document.addEventListener("keyup", function(event) {
+                    if(event.key == 'Enter') {
+                        var email = document.getElementById('email-input').value;
+                        var password = document.getElementById('password-input').value;
+    
+                        chrome.runtime.sendMessage({msg: 'login_user', data: {email: email, password: password, url: currentURL}});
+                    }
                 });
                 break;
             case 'success':
@@ -310,6 +355,31 @@ var _popup = {
                     showingMessage = false;
                 });
                 break;
+            case 'report-error':
+                document.getElementById('cancel-btn').addEventListener('click', function(){
+                    if(messageData.type == 'register')
+                        that.openPopup('register');
+                    else if(messageData.type == 'login') {
+                        that.openPopup('login');
+                    }
+                    else {
+                        that.openPopup('initial');
+                    }     
+                    showingMessage = false;
+                });
+                document.getElementById('report-btn').addEventListener('click', function(){
+                    if(messageData.type == 'register')
+                        that.openPopup('register');
+                    else if(messageData.type == 'login') {
+                        that.openPopup('login');
+                    }
+                    else {
+                        that.openPopup('initial');
+                    }     
+                    showingMessage = false;
+                    window.open('https://api.whatsapp.com/send?phone=5534997630275&text=Oi,%20gostaria%20de%20reportar%20um%20erro:%20', '_blank').focus();
+                });
+                break;
         };
 
         if(document.getElementById('others-highlight-toggle') != null) {
@@ -317,6 +387,7 @@ var _popup = {
                 document.getElementById('others-highlight-toggle').checked = true;
             else
                 document.getElementById('others-highlight-toggle').checked = false;
+
             document.getElementById('others-highlight-toggle').addEventListener('click', function() {
                 that.sendToBack('toggle_others_mode', {othersMode: !othersMode})
             });
@@ -356,6 +427,10 @@ var _popup = {
 
         $('.logout-btn').on('click', function() {
             _popup.logOut();
+        });
+
+        $('.login-header-btn').on('click', function() {
+            _popup.openPopup('initial');
         });
 
         document.querySelectorAll('.highlighter-popup-log .log-delete').forEach(item => {
@@ -420,10 +495,20 @@ var _popup = {
                         givingRatingData.rate_number = e.detail.value;
                     });
                     document.getElementById('about-content').addEventListener('click', function(){
-                        that.openPopupDown('about-content');
+                        if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
+                            _popup.openPopupDown('empty-rating');
+                        }
+                        else {
+                            that.openPopupDown('about-content');
+                        }
                     });
                     document.getElementById('cancel-btn').addEventListener('click', function(){
-                        that.openPopupDown('about-content');
+                        if(Object.keys(ratingData).length == 0) { //Não tem dado de avaliação
+                            _popup.openPopupDown('empty-rating');
+                        }
+                        else {
+                            that.openPopupDown('about-content');
+                        }
                     });
                     document.getElementById('send-btn').addEventListener('click', function(){
                         givingRatingData['page_url'] = window.location.href;
@@ -436,7 +521,16 @@ var _popup = {
             case 'about-content':
                 _utils.waitFor(_ => document.getElementById('rate-btn') != null).then(_ => {
                     document.getElementById('rate-btn').addEventListener('click', function(){
-                        that.openPopupDown('rate');
+                        chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                            if(data['destaquei_jwt_token']) {
+                                loggedIn = true;
+                                that.openPopupDown('rate');
+                            }
+                            else {
+                                loggedIn = false;
+                                that.openPopup('initial');
+                            }
+                        });
                     });
                     that.updateRating();
                 });
@@ -453,6 +547,20 @@ var _popup = {
                 document.getElementById('cancel-btn').addEventListener('click', function(){
                     that.openPopupDown('about-content');
                     showingMessage = false;
+                });
+                break;
+            case 'empty-rating':
+                document.getElementById('rate-btn').addEventListener('click', function(){
+                    chrome.storage.local.get('destaquei_jwt_token', function(data) {
+                        if(data['destaquei_jwt_token']) {
+                            loggedIn = true;
+                            that.openPopupDown('rate');
+                        }
+                        else {
+                            loggedIn = false;
+                            that.openPopup('initial');
+                        }
+                    });
                 });
                 break;
         }
@@ -619,70 +727,78 @@ var _popup = {
                     $.get(chrome.runtime.getURL('popup/comment.html'), function(data) {
                         var counter = 1;
                         var length = ratingData.comments.length;
-        
-                        $('.carousel-wrapper').html('');
-                        if(document.getElementsByClassName('comment-counter')[0])
-                            document.getElementsByClassName('comment-counter')[0].textContent = '1 de ' + length + ' comentários';
                         
-                        ratingData.comments.forEach(comment => {                
-                            var newComment = document.createElement('div');
-                            newComment.innerHTML = data;
-                            newComment.getElementsByClassName('carousel-slide')[0].id = 'comment_carousel_slide' + counter;
-        
-                            if(counter == 1) { //Se for o primeiro comentário
-                                //Vai pro último slide
-                                newComment.getElementsByClassName('carousel-prev')[0].href= '#comment_carousel_slide'+length;
-                                newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
-                                newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
-                                newComment.getElementsByClassName('carousel-next')[0].target = '_self';
-                            }
-                            else if(counter == length) { //Se for o último comentário
-                                newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
-                                newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
-                                //Vai pro primeiro slide
-                                newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide1';
-                                newComment.getElementsByClassName('carousel-next')[0].target = '_self';
-                            }
-                            else {
-                                newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
-                                newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
-                                newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
-                                newComment.getElementsByClassName('carousel-next')[0].target = '_self';
-                            }        
-        
-                            newComment.getElementsByClassName('comment-text')[0].textContent = '"'+comment.comment+'"';
-                            newComment.querySelector('.comment-owner .user-name').textContent = comment.user_name;
-                            newComment.querySelector('.comment-owner .rating-number').textContent = ' (nota: ' + comment.rate_number + '/5)';
+                        if(length > 0) {
+                            $('.carousel-wrapper').html('');
+                            if(document.getElementsByClassName('comment-counter')[0])
+                                document.getElementsByClassName('comment-counter')[0].textContent = '1 de ' + length + ' comentários';
                             
-                            counter++;
-        
-                            $('.carousel-wrapper').append(newComment.innerHTML);
-                        });
-        
-                        $('.carousel-next').on('click', function() {
-                            if(currentCommentIndex == ratingData.comments.length)
-                                currentCommentIndex = 1;
-                            else
-                                currentCommentIndex++;
-                            document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
-                        });
-        
-                        $('.carousel-prev').on('click', function() {
-                            if(currentCommentIndex == 1)
-                                currentCommentIndex = ratingData.comments.length;
-                            else
-                                currentCommentIndex--;
-                            document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
-                        });
-        
-                        document.querySelectorAll('a[href^="#"]').forEach(anchor => { //Corrigir bug
-                            anchor.addEventListener('click', function (e) {
-                                e.preventDefault();
-                                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                                    behavior: 'smooth'
+                            ratingData.comments.forEach(comment => {                
+                                var newComment = document.createElement('div');
+                                newComment.innerHTML = data;
+                                newComment.getElementsByClassName('carousel-slide')[0].id = 'comment_carousel_slide' + counter;
+            
+                                if(counter == 1) { //Se for o primeiro comentário
+                                    //Vai pro último slide
+                                    newComment.getElementsByClassName('carousel-prev')[0].href= '#comment_carousel_slide'+length;
+                                    newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                                    newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
+                                    newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                                }
+                                else if(counter == length) { //Se for o último comentário
+                                    newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
+                                    newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                                    //Vai pro primeiro slide
+                                    newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide1';
+                                    newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                                }
+                                else {
+                                    newComment.getElementsByClassName('carousel-prev')[0].href = '#comment_carousel_slide'+(counter-1);
+                                    newComment.getElementsByClassName('carousel-next')[0].href = '#comment_carousel_slide'+(counter+1);
+                                    newComment.getElementsByClassName('carousel-prev')[0].target = '_self';
+                                    newComment.getElementsByClassName('carousel-next')[0].target = '_self';
+                                }        
+            
+                                newComment.getElementsByClassName('comment-text')[0].textContent = '"'+comment.comment+'"';
+                                newComment.querySelector('.comment-owner .user-name').textContent = comment.user_name;
+                                newComment.querySelector('.comment-owner .rating-number').textContent = ' (nota: ' + comment.rate_number + '/5)';
+                                
+                                counter++;
+            
+                                $('.carousel-wrapper').append(newComment.innerHTML);
+                            });
+            
+                            $('.carousel-next').on('click', function() {
+                                if(currentCommentIndex == ratingData.comments.length)
+                                    currentCommentIndex = 1;
+                                else
+                                    currentCommentIndex++;
+                                document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
+                            });
+            
+                            $('.carousel-prev').on('click', function() {
+                                if(currentCommentIndex == 1)
+                                    currentCommentIndex = ratingData.comments.length;
+                                else
+                                    currentCommentIndex--;
+                                document.getElementsByClassName('comment-counter')[0].textContent = currentCommentIndex + ' de ' + length + ' comentários';
+                            });
+            
+                            document.querySelectorAll('a[href^="#"]').forEach(anchor => { //Corrigir bug
+                                anchor.addEventListener('click', function (e) {
+                                    e.preventDefault();
+                                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                                        behavior: 'smooth'
+                                    });
                                 });
                             });
-                        });
+                        }
+                        else {
+                            var newComment = document.createElement('div');
+                            newComment.innerHTML = data; 
+                            newComment.getElementsByClassName('comment-text')[0].textContent = 'Ainda não há nenhum comentário sobre esse site :(';
+                            $('.carousel-wrapper').append(newComment.innerHTML);
+                        }
                     });
                 });
             }
@@ -692,7 +808,7 @@ var _popup = {
     logOut: function() {
         chrome.storage.local.remove('destaquei_jwt_token');
         chrome.storage.local.remove('user_email');
-        _dataControl.removeAllHighlightsStyles('all', 'loadOthers');
+        _popup.sendToBack('remove_all_highlights', {});
         _popup.openPopup('initial');
     },
 

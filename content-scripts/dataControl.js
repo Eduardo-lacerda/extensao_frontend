@@ -3,7 +3,8 @@ var log = {};
 var highlights = [];
 var logsHTML = {};
 var othersHighlights = [];
-
+var loggedIn = false;
+var onLimit = false;
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
@@ -18,7 +19,7 @@ chrome.extension.onMessage.addListener(function(message, messageSender, sendResp
             _dataControl.stylizeHighlights(message.data);
             break;
         case "remove_all_highlights_styles":
-            _dataControl.removeAllHighlightsStyles('others', 'loadAllHighlightsAndOthers');
+            _dataControl.removeAllHighlightsStyles('all', 'loadAllHighlightsAndOthers');
             break;
         case "update_others_highlights_then_mine":
             _dataControl.stylizeHighlights(message.data);
@@ -111,7 +112,6 @@ var _dataControl = {
         else {
             doc = document;
         }
-
         if(data['highlightData'])
             this.stylizeMineHighlights(data.highlightData, doc);
         if(data['othersHighlightsData'])
@@ -152,7 +152,7 @@ var _dataControl = {
 
     stylizeOthersHighlights: function (highlightData, doc) {
         othersHighlights = highlightData;
-        if(highlightData != undefined) {
+        if(highlightData != undefined && othersMode == true) {
             highlightData.forEach(highlight => {
                 if(highlight.url == currentURL) {
                     highlight.color = 'others-color';

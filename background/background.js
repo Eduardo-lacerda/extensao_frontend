@@ -22,15 +22,18 @@ chrome.runtime.onInstalled.addListener(function() {
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     updatedPage = true;
     if (changeInfo.status == 'complete') {
-        currentTabId = tabId;
-        if(tab.url.match(baseUrlRegex))
-            _dataControl.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+            //chrome.storage.local.set({'mine_highlights': []}, function () {});
+            currentTabId = tabId;
+            if(tab.url.match(baseUrlRegex))
+                _dataControl.getRating(tabId, tab.url, tab.url.match(baseUrlRegex)[0]);
+        toggleOpened = false;
         if(popupOpened) {
             popupOpened = !popupOpened;
             if(toggleOpened)
                 toggleOpened = !toggleOpened;
             togglePopup();
         }
+
         chrome.storage.local.set({'highlightMode': false}, function() {});
         //Carregar os highlights já feitos na página e o log
         _dataControl.getAllHighlightsClosePopup(tab.url);
@@ -49,7 +52,7 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 });
 
 //Ao clicar no ícone
-chrome.browserAction.onClicked.addListener(function (){
+chrome.browserAction.onClicked.addListener(function (tab){
     updatedPage = false;
     togglePopup();
     //Resetar highlights
@@ -70,6 +73,7 @@ chrome.contextMenus.onClicked.addListener(function(info, tab) {
 function togglePopup() {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
+            toggleIcon(tab);
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage, othersMode: othersMode}});
         });
     });
@@ -78,6 +82,7 @@ function togglePopup() {
 function togglePopupOption(_popupOpened) {
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
+            toggleIcon(tab);
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_popup', data: {highlightMode: highlightMode, popupOpened: _popupOpened, popupFixed: popupFixed, color: color, toggleOpened: toggleOpened, updatedPage: updatedPage, othersMode: othersMode}});
         });
     });
@@ -96,9 +101,25 @@ function toggleHighlightMode(activated) {
     highlightMode = activated;
     chrome.tabs.query({}, function(tabs) {
         tabs.forEach((tab) => {
+            toggleIcon(tab);
             chrome.tabs.sendMessage(tab.id, {msg: 'toggle_highlight_mode', data: {highlightMode: activated}});
         });
     });
+}
+
+function toggleIcon(tab) {
+    if(highlightMode) {
+        chrome.browserAction.setIcon({
+            path: '../icons/128x128-ativo.png',
+            tabId: tab.tabId
+        });
+    }
+    else {
+        chrome.browserAction.setIcon({
+            path: '../icons/128x128-desat.png',
+            tabId: tab.tabId
+        });
+    }
 }
 
 function setColor(newColor) {

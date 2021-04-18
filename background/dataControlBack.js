@@ -5,6 +5,8 @@ var ratingData = {};
 var othersHighlightsData = {};
 var userEmail;
 var jwtToken;
+var loggedIn = false;
+var highlightsLimit = 5;
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function (message, messageSender, sendResponse) {
@@ -39,12 +41,24 @@ chrome.extension.onMessage.addListener(function (message, messageSender, sendRes
         case "update_log":
             _dataControl.getHighlights('updateLog');
             break;
+        case "remove_all_highlights":
+            _dataControl.sendToFront('remove_all_highlights_styles', {});
     }
     return true;
 });
 //--------------------------------------
 
 var _dataControl = {
+    create_UUID: function(){
+        var dt = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (dt + Math.random()*16)%16 | 0;
+            dt = Math.floor(dt/16);
+            return (c=='x' ? r :(r&0x3|0x8)).toString(16);
+        });
+        return uuid;
+    },
+
     getAllHighlights: function(tabUrl) {
         if(othersMode)
             this.getOthersHighlights(tabUrl, false);
@@ -61,9 +75,8 @@ var _dataControl = {
 
     getHighlights: function (callBack, substring, closePopup) {
         var that = this;
-
         chrome.storage.local.get('destaquei_jwt_token', function (data) {
-            if (data['destaquei_jwt_token']) {
+            if (data['destaquei_jwt_token']) { //Se tiver logado
                 var params = {};
                 if(substring != undefined && substring != null) {
                     params['text'] = substring;
@@ -77,7 +90,6 @@ var _dataControl = {
                     type: 'get',
                     crossDomain: true,
                     success: function (response) {
-                        
                         if (!response.error) {
                             var data = response.results;
                             highlightData = response.results.highlights;
@@ -104,6 +116,31 @@ var _dataControl = {
                             else
                                 that.sendToFront('error_message', { msg: "Erro no servidor", type: "get_highlights" });
                         }
+                    }
+                });
+            }
+            else { //Se não estiver logado
+                chrome.storage.local.get('mine_highlights', function (data) {
+                    highlightData = [];
+                    if(data['mine_highlights']) {
+                        highlightData = data.mine_highlights;
+                    }
+                    if(substring != undefined && substring != null) {
+                        highlightData = highlightData.filter(item => {
+                            return item.text.includes(substring);
+                        });
+                    }
+                    if (callBack == 'updateAll') {
+                        that.updateLog(highlightData);
+                        that.updatePageHighlights(highlightData);
+                    }
+                    else if (callBack == 'updateLog')
+                        that.updateLog(highlightData);
+                    else if (callBack == 'updatePageHighlights')
+                        that.updatePageHighlights(highlightData);
+                    else if (callBack == 'updateAllAndOthers') {
+                        that.updateLog(highlightData);
+                        that.updateOthersHighlightsThenMine(closePopup);
                     }
                 });
             }
@@ -135,17 +172,11 @@ var _dataControl = {
                 success: function (response) {
                     if (!response.error) {
                         var responseData = response.results.highlights;
-                        othersHighlightsData = responseData;
-                        if (data['destaquei_jwt_token']) {
-                            that.getHighlights('updateAllAndOthers', '', closePopup);
-                        }
-                        else {
-                            that.updateOthersHighlights();
-                        }
+                        othersHighlightsData[url] = responseData;
+                        that.getHighlights('updateAllAndOthers', '', closePopup);
                     }
                 },
                 error: function (response) {
-                    
                     //Se code for 401, logar de novo
                     if (response.error) {
                         if (response.errors)
@@ -163,7 +194,13 @@ var _dataControl = {
     },
 
     updateOthersHighlightsThenMine: function(closePopup) {
-        this.sendToFront('update_others_highlights_then_mine', {othersHighlightsData: othersHighlightsData, highlightData: highlightData, closePopup: closePopup});
+        var that = this;
+        chrome.tabs.query({}, function(tabs) {
+            tabs.forEach((tab) => {
+                that.sendToFront('update_others_highlights_then_mine', {othersHighlightsData: othersHighlightsData[tab.url], highlightData: highlightData, closePopup: closePopup}, tab.id);
+            });
+        });
+        
     },
 
     saveHighlight: function (highlight) {
@@ -183,10 +220,9 @@ var _dataControl = {
                         crossDomain: true,
                         data: JSON.stringify(highlight),
                         success: function (response) {
-                            
                             if (!response.error) {
                                 that.getHighlights('updateLog');
-                                that.sendToFront('wrap_highlight', { highlightId: response.results.id, xpath: response.results.xpath })
+                                that.sendToFront('wrap_highlight', { highlightId: response.results.id, xpath: response.results.xpath });
                             }
                         },
                         error: function (response) {
@@ -199,6 +235,41 @@ var _dataControl = {
                             }
                         }
                     });
+                });
+            }
+            else { //Se não tiver logado
+                chrome.storage.local.get('mine_highlights', function (mineData) {
+                    var mineHighlightData = [];
+                    var newHighlight = JSON.parse(JSON.stringify(highlight));
+                    if(mineData['mine_highlights']) {
+                        mineHighlightData = mineData.mine_highlights;
+                    }
+                    if(mineHighlightData.length <= highlightsLimit) { //Se estiver abaixo do limite de highlights
+                        switch(highlight.color) {
+                            case 'y':
+                                newHighlight.color = ['yellow'];
+                                break;
+                            case 'g':
+                                newHighlight.color = ['green'];
+                                break;
+                            case 'o':
+                                newHighlight.color = ['orange'];
+                                break;
+                        }
+                        var newId =  that.create_UUID();
+                        newHighlight['_id'] = newId;
+                        newHighlight['color'] = [newHighlight['color']];
+                        mineHighlightData.push(newHighlight);
+                        mineHighlightData = mineHighlightData.reverse();
+                        chrome.storage.local.set({'mine_highlights': mineHighlightData}, function () {
+                            that.sendToFront('wrap_highlight', { highlightId: newHighlight._id, xpath: newHighlight.xpath });
+                            that.updateLog(mineHighlightData);
+        
+                        });
+                    }
+                    else { //Se tiver acima do limite
+                        that.sendToFront('exceeded_limit', {});
+                    }
                 });
             }
         });
@@ -235,7 +306,6 @@ var _dataControl = {
     updateLog: function (data) {
         log = data;
         var logsHTML = '';
-        
         if (data != undefined) {
             data.forEach(highlight => {
                 highlight.color = highlight.color[0];
@@ -299,12 +369,25 @@ var _dataControl = {
                     jwtToken = response.results.token;
                     chrome.storage.local.set({ 'destaquei_jwt_token': response.results.token }, function () { });
                     chrome.storage.local.set({ 'user_email': response.results.user.email }, function () { });
+                    loggedIn = true;
                     that.sendToFront('logged_in', {});
                     that.sendToFront('remove_all_highlights_styles', {});
+                    //Salvar highlights de antes de logar
+                    chrome.storage.local.get('mine_highlights', function (mineData) {
+                        if(mineData['mine_highlights']) {
+                            var mineHighlightData = mineData.mine_highlights;
+                            mineHighlightData.forEach(item => {
+                                if(item['id'])
+                                    delete item['id'];
+                                if(item['_id'])
+                                    delete item['_id'];
+                                that.saveHighlight(item);
+                            });
+                        }
+                    });
                 }
             },
             error: function (response) {
-                console.log(response)
                 response = response.responseJSON;
                 if (response.error) {
                     if (response.errors)
@@ -354,6 +437,20 @@ var _dataControl = {
                             else
                                 _popup.showMessage({ msg: 'Erro no servidor', type: "save_highlight" }, 'error');
                         }
+                    }
+                });
+            }
+            else {
+                chrome.storage.local.get('mine_highlights', function (data) {
+                    var mineHighlightData = [];
+                    if(data['mine_highlights']) {
+                        mineHighlightData = data.mine_highlights;
+                        mineHighlightData = mineHighlightData.filter(function(item) {
+                            return item._id != highlightId;
+                        });
+                        chrome.storage.local.set({'mine_highlights': mineHighlightData}, function () {
+                            that.updateLog(mineHighlightData);
+                        });
                     }
                 });
             }

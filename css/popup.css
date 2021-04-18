@@ -435,7 +435,7 @@
     align-items: center;
     height: 227px;
     flex-flow: column;
-    padding-top: 78px;
+    padding-top: 57px;
 }
 
 .register-text {
@@ -839,4 +839,11 @@ dialog:not([open]) {
     color: #404040;
     font-size: 11px;
     padding: 4px;
+}
+
+.initial-message-wrapper {
+    font-size: 13px;
+    width: 80%;
+    text-align: center;
+    margin-bottom: 15px;
 }
