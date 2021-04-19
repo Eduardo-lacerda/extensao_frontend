@@ -1,8 +1,8 @@
 {
   "name": "Destaquei",
   "version": "0.1",
-  "description": "Encontre informações de forma muito mais rápida!",
-  "permissions": ["contextMenus", "storage", "declarativeContent", "activeTab", "<all_urls>", "tabs", "unlimitedStorage", "<all_urls>", "https://visualiz.com.br/*"],
+  "description": "Encontre informações de forma muito mais rápida na internet!",
+  "permissions": ["contextMenus", "storage", "declarativeContent", "activeTab", "tabs", "unlimitedStorage", "<all_urls>", "https://visualiz.com.br/*"],
   "background": {
     "scripts": ["background/background.js", "background/dataControlBack.js", "utils/jquery.js",
       "utils/material.js", "utils/utils.js"],
@@ -38,6 +38,11 @@
     "popup/hoverHighlights.html",
     "popup/reportError.html"
   ],
+  "icons": {
+    "16": "icons/16x16-ativo.png",
+    "48": "icons/48x48-ativo.png",
+   "128": "icons/128x128-ativo.png"
+ },
   "browser_action": {
     "default_icon": "icons/128x128-desat.png",
     "icons": {
@@ -46,5 +51,6 @@
       "128": "icons/128x128-desat.png"
     }
   },
+  "default_icon": "icons/128x128-desat.png",
   "manifest_version": 2
 }

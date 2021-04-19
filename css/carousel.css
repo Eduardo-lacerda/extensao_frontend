@@ -236,6 +236,11 @@ li {
   width: 100%;
 }
 
+.carousel-prev, .carousel-next {
+  height: 20px !important;
+  width: 20px !important;
+}
+
 .comment-owner .user-name {
   color: #000065;
 }

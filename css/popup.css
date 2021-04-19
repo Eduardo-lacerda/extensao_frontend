@@ -847,3 +847,10 @@ dialog:not([open]) {
     text-align: center;
     margin-bottom: 15px;
 }
+
+
+
+/*COLOCAR POR CIMA DA AD*/
+#ppBoxAnchor, .ppAnchorWidthAd {
+    z-index: 5000 !important;
+}
