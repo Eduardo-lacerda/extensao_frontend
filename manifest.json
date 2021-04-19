@@ -1,7 +1,7 @@
 {
-  "name": "Visualiz",
+  "name": "Destaquei",
   "version": "0.1",
-  "description": "Build an Extension!",
+  "description": "Encontre informações de forma muito mais rápida!",
   "permissions": ["contextMenus", "storage", "declarativeContent", "activeTab", "<all_urls>", "tabs", "unlimitedStorage", "<all_urls>", "https://visualiz.com.br/*"],
   "background": {
     "scripts": ["background/background.js", "background/dataControlBack.js", "utils/jquery.js",
