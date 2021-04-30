@@ -5,6 +5,13 @@ var logsHTML = {};
 var othersHighlights = [];
 var loggedIn = false;
 var onLimit = false;
+var temporaryId = null;
+
+chrome.storage.local.get('temporary_id', function (data) {
+    if (data['temporary_id']) {
+        temporaryId = data['temporary_id'];
+    }
+});
 
 //Carregar os highlights já feitos na página
 chrome.extension.onMessage.addListener(function(message, messageSender, sendResponse) {
@@ -155,9 +162,18 @@ var _dataControl = {
         if(highlightData != undefined && othersMode == true) {
             highlightData.forEach(highlight => {
                 if(highlight.url == currentURL) {
-                    highlight.color = 'others-color';
-                    highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
-                    _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id, doc);
+                    if(temporaryId != null) {
+                        if(highlight.user_email != ('not-authenticated'+temporaryId)) {
+                            highlight.color = 'others-color';
+                            highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
+                            _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id, doc);
+                        }
+                    }
+                    else {
+                        highlight.color = 'others-color';
+                        highlight.color = highlight.color + ' others-highlight'; //Classe pra diferenciar highlights alheios
+                        _highlighter.highlightLoadedText(highlight.xpath, highlight.color, highlight._id, doc);
+                    }
                 }
             });
         }

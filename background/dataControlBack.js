@@ -238,6 +238,7 @@ var _dataControl = {
                 });
             }
             else { //Se não tiver logado
+                _dataControl.saveTemporaryHighlightBackEnd(highlight);
                 chrome.storage.local.get('mine_highlights', function (mineData) {
                     var mineHighlightData = [];
                     var newHighlight = JSON.parse(JSON.stringify(highlight));
@@ -264,11 +265,34 @@ var _dataControl = {
                         chrome.storage.local.set({'mine_highlights': mineHighlightData}, function () {
                             that.sendToFront('wrap_highlight', { highlightId: newHighlight._id, xpath: newHighlight.xpath });
                             that.updateLog(mineHighlightData);
-        
                         });
                     }
                     else { //Se tiver acima do limite
                         that.sendToFront('exceeded_limit', {});
+                    }
+                });
+            }
+        });
+    },
+    
+    saveTemporaryHighlightBackEnd: function (highlight) {
+        chrome.storage.local.get('temporary_id', function (data) {
+            if (data['temporary_id']) {
+                highlight['user_email'] = 'not-authenticated'+data['temporary_id'];
+                $.ajax({
+                    url: "https://visualiz.com.br/highlights/notauthenticated",
+                    contentType: "application/json",
+                    dataType: "json",
+                    type: 'post',
+                    crossDomain: true,
+                    data: JSON.stringify(highlight),
+                    success: function (response) {
+                        if (!response.error) {
+                        
+                        }
+                    },
+                    error: function (response) {
+                        
                     }
                 });
             }

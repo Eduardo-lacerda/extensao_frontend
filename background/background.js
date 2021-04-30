@@ -7,6 +7,7 @@ var toggleOpened = false;
 var updatedPage = false;
 var baseUrlRegex = /^https?:\/\/[^\/]+/i;
 var currentTabId;
+var updatingOldHighlights = false;
 
 chrome.runtime.onInstalled.addListener(function() {
     chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
@@ -38,6 +39,35 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         //Carregar os highlights já feitos na página e o log
         _dataControl.getAllHighlightsClosePopup(tab.url);
         //--------------------------------------
+
+
+        //chrome.storage.local.remove('temporary_id');
+        chrome.storage.local.get('temporary_id', function (data) {
+            if (data['temporary_id']) {
+
+            }
+            else {
+                if(updatingOldHighlights == false) {
+                    updatingOldHighlights = true;
+                    chrome.storage.local.get('destaquei_jwt_token', function (data) {
+                        if(!data['destaquei_jwt_token']) {
+                            var temporaryId = _utils.create_UUID();
+                            chrome.storage.local.set({'temporary_id': temporaryId});
+                            chrome.storage.local.get('mine_highlights', function (mineData) {
+                                if(mineData['mine_highlights']) {
+                                    mineHighlightData = mineData.mine_highlights;
+                                    mineHighlightData.forEach(highlight => {
+                                        highlight.color = highlight.color[0];
+                                        delete highlight['_id'];
+                                        _dataControl.saveTemporaryHighlightBackEnd(highlight);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
     }
 });
 
